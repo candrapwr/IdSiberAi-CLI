@@ -81,14 +81,13 @@ ACTION: [tool_name]
 PARAMETERS: [JSON format]
 MESSAGE: [brief action description]
 
-# If you don't need a tool, please respond in EXACT format:
-RESPONE: [brief action description]
+# If you don't need a tool, please respond without special format!
 
 ### For multiple operations, plan them sequentially - do one, wait for result, then continue with next
 
 ## Available tools
 
-# FILE OPERATIONS
+# FILE OPERATIONS TOOLS
 - search_files(pattern, directory): Find files
 - read_file(file_path): Read file content
 - write_file(file_path, content): Create/update file
@@ -97,7 +96,7 @@ RESPONE: [brief action description]
 - copy_file(source_path, destination_path): Copy file
 - move_file(source_path, destination_path): Move/rename file
 
-# DIRECTORY OPERATIONS
+# DIRECTORY OPERATIONS TOOLS
 - list_directory(dir_path): List directory contents
 - create_directory(dir_path): Create directory
 - delete_directory(dir_path): Delete directory
@@ -107,7 +106,7 @@ RESPONE: [brief action description]
 - find_in_files(search_term, directory, file_pattern): Search in files
 - replace_in_files(search_term, replace_term, directory, file_pattern): Replace in files
 
-# SYSTEM OPERATIONS
+# SYSTEM OPERATIONS TOOLS
 - execute_command(command, options): Execute commands
 
 # Response rules
@@ -117,14 +116,14 @@ RESPONE: [brief action description]
 - Save explanations unless requested
 - For multiple operations: do first, then continue
 
-## Example used tools (CORRECT)
+## Example used tools (CORRECT):
 THINKING: Need to delete first file
 ACTION: delete_file
 PARAMETERS: {"file_path": "form_sederhana.php"}
 MESSAGE: Deleting form_sederhana.php...
 
-## Example without tools (CORRECT)
-RESPONE: Please, what can I help you with....
+## Example without tools (CORRECT):
+Please, what can I help you with....
 
 ## Task: Execute user requests efficiently, ONE action at a time`;
 
@@ -578,7 +577,7 @@ RESPONE: Please, what can I help you with....
             streamMode: this.streamMode,
             maxIterations: this.maxIterations,
             toolsCount: Object.keys(this.availableTools).length,
-            conversationLength: this.conversationHistory.length - 1, // Exclude system message
+            conversationLength: this.conversationHistory.length - 1,
             loggingEnabled: !!this.logger,
             currentAIProvider: this.aiManager.currentProvider,
             availableAIProviders: this.aiManager.getAvailableProviders(),

@@ -2,6 +2,7 @@ import { DeepSeekProvider } from './DeepSeekProvider.js';
 import { OpenAIProvider } from './OpenAIProvider.js';
 import { ClaudeProvider } from './ClaudeProvider.js';
 import { GrokProvider } from './GrokProvider.js';
+import { ZhiPuAIProvider } from './ZhiPuAIProvider.js';
 import dotenv from 'dotenv';
 
 export class AIManager {
@@ -41,11 +42,17 @@ export class AIManager {
             this.providers.set('Grok', grok);
         }
 
+        // ZhiPuAI
+        if (apiKeys.zhipuai) {
+            const zhipuai = new ZhiPuAIProvider(apiKeys.zhipuai, this.enableLogging);
+            this.providers.set('ZhiPuAI', zhipuai);
+        }
+
         // Set provider pertama yang tersedia sebagai default
         if (this.providers.size > 0) {
             if (this.providers.has(this.defaultProvider)) {
                 this.currentProvider = this.defaultProvider;
-            } else{
+            } else {
                 const firstProvider = Array.from(this.providers.keys())[0];
                 this.currentProvider = firstProvider;
                 
@@ -180,6 +187,9 @@ export class AIManager {
                 break;
             case 'grok':
                 provider = new GrokProvider(apiKey, this.enableLogging);
+                break;
+            case 'zhipuai':
+                provider = new ZhiPuAIProvider(apiKey, this.enableLogging);
                 break;
             default:
                 throw new Error(`Provider type ${providerType} tidak didukung`);

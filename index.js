@@ -67,61 +67,19 @@ class GeneralMCPCLI {
         console.log(chalk.yellow('⚙️  Configuration Setup - Multi-AI Edition'));
         console.log(chalk.gray('Configure your AI providers and system settings:'));
         
-        // Step 1: AI Provider Configuration
         const aiConfig = await this.configureAIProviders();
         if (!aiConfig || Object.keys(aiConfig).length === 0) {
             console.log(chalk.red('❌ At least one AI provider must be configured'));
             return null;
         }
-        
-        // Step 2: System Configuration
-        const systemQuestions = [
-            {
-                type: 'input',
-                name: 'workingDirectory',
-                message: 'Working Directory Path:',
-                default: process.env.WORKING_DIRECTORY || './workspace',
-                validate: (input) => {
-                    if (!input.trim()) {
-                        return 'Working directory is required';
-                    }
-                    return true;
-                }
-            },
-            {
-                type: 'number',
-                name: 'maxIterations',
-                message: 'Maximum iterations per request:',
-                default: parseInt(process.env.MAX_ITERATIONS) || 15,
-                validate: (input) => {
-                    if (input < 1 || input > 50) {
-                        return 'Please enter a number between 1 and 50';
-                    }
-                    return true;
-                }
-            },
-            {
-                type: 'confirm',
-                name: 'enableLogging',
-                message: 'Enable API and conversation logging?',
-                default: true
-            },
-            {
-                type: 'confirm',
-                name: 'streamMode',
-                message: 'Enable streaming mode (real-time response)?',
-                default: true
-            }
-        ];
 
         try {
-            const systemAnswers = await inquirer.prompt(systemQuestions);
             return {
                 apiKeys: aiConfig,
-                workingDirectory: path.resolve(systemAnswers.workingDirectory.trim()),
-                maxIterations: systemAnswers.maxIterations,
-                enableLogging: systemAnswers.enableLogging,
-                streamMode: systemAnswers.streamMode
+                workingDirectory: path.resolve(process.env.WORKING_DIRECTORY || './workspace'),
+                maxIterations: parseInt(process.env.MAX_ITERATIONS) || 15,
+                enableLogging: process.env.ENABLE_LOGGING === 'true',
+                streamMode: process.env.ENABLE_STREAMING === 'true'
             };
         } catch (error) {
             return null;
@@ -133,7 +91,8 @@ class GeneralMCPCLI {
             { name: 'DeepSeek', key: 'deepseek', envVar: 'DEEPSEEK_API_KEY' },
             { name: 'OpenAI', key: 'openai', envVar: 'OPENAI_API_KEY' },
             { name: 'Claude', key: 'claude', envVar: 'CLAUDE_API_KEY' },
-            { name: 'Grok', key: 'grok', envVar: 'GROK_API_KEY' }
+            { name: 'Grok', key: 'grok', envVar: 'GROK_API_KEY' },
+            { name: 'ZhiPuAI', key: 'zhipuai', envVar: 'ZHIPUAI_API_KEY' }
         ];
 
         const apiKeys = {};
@@ -143,16 +102,7 @@ class GeneralMCPCLI {
 
         for (const provider of providers) {
             const defaultKey = process.env[provider.envVar] || '';
-            
-            const { apiKey } = await inquirer.prompt([
-                {
-                    type: 'password',
-                    name: 'apiKey',
-                    message: `${provider.name} API Key:`,
-                    default: defaultKey,
-                    mask: '*'
-                }
-            ]);
+            const apiKey = defaultKey;
 
             if (apiKey && apiKey.trim()) {
                 apiKeys[provider.key] = apiKey.trim();
