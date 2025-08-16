@@ -20,8 +20,8 @@ export class OpenAIProvider extends BaseAIProvider {
         const request = {
             model: options.model || this.getDefaultModel(),
             messages: this.normalizeMessages(messages),
-            temperature: options.temperature || 0.7,
-            max_tokens: options.max_tokens || 2000,
+            temperature: 0.3,
+            max_tokens: options.max_tokens || 10000,
             stream: options.stream || false
         };
 
