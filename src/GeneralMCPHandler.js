@@ -83,7 +83,17 @@ MESSAGE: [brief action description]
 
 # If you don't need a tool, please respond without special format!
 
-### For multiple operations, plan them sequentially - do one, wait for result, then continue with next
+# IMPORTANT: For multiple operations, you can now include MULTIPLE tool calls in one response
+# Format for multiple tool calls:
+THINKING: [first analysis]
+ACTION: [first_tool_name]
+PARAMETERS: [JSON format]
+MESSAGE: [first action description]
+
+THINKING: [second analysis]
+ACTION: [second_tool_name]
+PARAMETERS: [JSON format]
+MESSAGE: [second action description]
 
 ## Available tools
 
@@ -110,22 +120,27 @@ MESSAGE: [brief action description]
 - execute_command(command, options): Execute commands
 
 # Response rules
-- ONE action per response maximum
+- You can use MULTIPLE tools in a single response
+- Use proper tool call format for each action
 - Be direct and concise
-- Focus on current action only
-- Save explanations unless requested
-- For multiple operations: do first, then continue
+- For multi-step operations that depend on previous results, submit them one at a time
+- For independent operations, include them all in one response
 
-## Example used tools (CORRECT):
-THINKING: Need to delete first file
-ACTION: delete_file
-PARAMETERS: {"file_path": "form_sederhana.php"}
-MESSAGE: Deleting form_sederhana.php...
+## Example with multiple tool calls (CORRECT):
+THINKING: Need to create a directory first
+ACTION: create_directory
+PARAMETERS: {"dir_path": "project/src"}
+MESSAGE: Creating source directory...
+
+THINKING: Need to create a file in the directory
+ACTION: write_file
+PARAMETERS: {"file_path": "project/src/index.js", "content": "console.log('Hello World!');"}
+MESSAGE: Creating index.js file...
 
 ## Example without tools (CORRECT):
 Please, what can I help you with....
 
-## Task: Execute user requests efficiently, ONE action at a time`;
+## Task: Execute user requests efficiently`;
 
         this.conversationHistory = [
             { role: 'system', content: systemPrompt }
@@ -198,53 +213,129 @@ Please, what can I help you with....
         }
     }
 
-    parseToolCall(response) {
+    // Extract all tool calls from the response
+    extractAllToolCalls(response) {
         try {
-            // Only parse the FIRST occurrence of ACTION to prevent multiple actions
-            const actionMatch = response.match(/ACTION:\s*(\w+)/);
-            const parametersMatch = response.match(/PARAMETERS:\s*({.*?})(?=\n(?:THINKING|ACTION|PARAMETERS|MESSAGE|$))/s);
-            const messageMatch = response.match(/MESSAGE:\s*(.*?)(?=\n(?:THINKING|ACTION|PARAMETERS|MESSAGE|$))/s);
-            const thinkingMatch = response.match(/THINKING:\s*(.*?)(?=\n(?:ACTION|PARAMETERS|MESSAGE|$))/s);
-
-            // Check for multiple ACTION blocks and warn
-            const allActionMatches = response.match(/ACTION:\s*\w+/g);
-            if (allActionMatches && allActionMatches.length > 1) {
-                console.log(chalk.yellow('⚠️  Multiple actions detected, processing first only'));
-            }
-
-            if (actionMatch && parametersMatch) {
-                try {
-                    const parameters = JSON.parse(parametersMatch[1]);
-                    const toolCall = {
-                        thinking: thinkingMatch ? thinkingMatch[1].trim() : '',
-                        action: actionMatch[1],
-                        parameters,
-                        message: messageMatch ? messageMatch[1].trim() : ''
-                    };
-                    
-                    console.log(chalk.gray(`🎯 Parsed tool call: ${toolCall.action}`));
-                    return toolCall;
-                } catch (jsonError) {
-                    console.error(chalk.red('❌ Error parsing parameters JSON:'), jsonError.message);
-                    console.error(chalk.red('Raw parameters:'), parametersMatch[1]);
-                    
-                    // Log parsing error
-                    if (this.logger) {
-                        this.logger.logError(jsonError, {
-                            context: 'tool_call_parsing',
-                            rawResponse: response,
-                            rawParameters: parametersMatch[1],
-                            sessionId: this.sessionId
-                        }).catch(logError => {
-                            console.error(chalk.red('❌ Failed to log parsing error:'), logError.message);
-                        });
+            const toolCalls = [];
+            
+            // Find all ACTION blocks in the response
+            const actionBlocks = response.split(/(?=THINKING:|ACTION:)/);
+            
+            for (const block of actionBlocks) {
+                const actionMatch = block.match(/ACTION:\s*(\w+)/);
+                if (!actionMatch) continue;
+                
+                const parametersMatch = block.match(/PARAMETERS:\s*({.*?})(?=\n(?:THINKING|ACTION|PARAMETERS|MESSAGE|$)|$)/s);
+                const messageMatch = block.match(/MESSAGE:\s*(.*?)(?=\n(?:THINKING|ACTION|PARAMETERS|MESSAGE|$)|$)/s);
+                const thinkingMatch = block.match(/THINKING:\s*(.*?)(?=\n(?:ACTION|PARAMETERS|MESSAGE|$)|$)/s);
+                
+                if (actionMatch && parametersMatch) {
+                    try {
+                        const parameters = JSON.parse(parametersMatch[1]);
+                        const toolCall = {
+                            thinking: thinkingMatch ? thinkingMatch[1].trim() : '',
+                            action: actionMatch[1],
+                            parameters,
+                            message: messageMatch ? messageMatch[1].trim() : ''
+                        };
+                        
+                        toolCalls.push(toolCall);
+                    } catch (jsonError) {
+                        console.error(chalk.red(`❌ Error parsing parameters JSON for ${actionMatch[1]}:`), jsonError.message);
+                        console.error(chalk.red('Raw parameters:'), parametersMatch[1]);
+                        
+                        // Log parsing error
+                        if (this.logger) {
+                            this.logger.logError(jsonError, {
+                                context: 'tool_call_parsing',
+                                rawResponse: block,
+                                rawParameters: parametersMatch[1],
+                                sessionId: this.sessionId
+                            }).catch(logError => {
+                                console.error(chalk.red('❌ Failed to log parsing error:'), logError.message);
+                            });
+                        }
                     }
-                    
-                    return null;
                 }
             }
             
-            // No tool call found - this is normal for final responses
+            if (toolCalls.length > 0) {
+                console.log(chalk.gray(`🎯 Found ${toolCalls.length} tool calls: ${toolCalls.map(tc => tc.action).join(', ')}`));
+            }
+            
+            return toolCalls;
+        } catch (error) {
+            console.error(chalk.red('❌ Error in extractAllToolCalls:'), error.message);
+            
+            // Log general parsing error
+            if (this.logger) {
+                this.logger.logError(error, {
+                    context: 'extract_all_tool_calls',
+                    rawResponse: response,
+                    sessionId: this.sessionId
+                }).catch(logError => {
+                    console.error(chalk.red('❌ Failed to log parsing error:'), logError.message);
+                });
+            }
+            
+            return [];
+        }
+    }
+
+    parseToolCall(response) {
+        try {
+            // Detect all tool calls in the response
+            const toolCalls = [];
+            
+            // Find all ACTION blocks in the response
+            const actionBlocks = response.split(/(?=THINKING:|ACTION:)/);
+            
+            for (const block of actionBlocks) {
+                const actionMatch = block.match(/ACTION:\s*(\w+)/);
+                if (!actionMatch) continue;
+                
+                const parametersMatch = block.match(/PARAMETERS:\s*({.*?})(?=\n(?:THINKING|ACTION|PARAMETERS|MESSAGE|$)|$)/s);
+                const messageMatch = block.match(/MESSAGE:\s*(.*?)(?=\n(?:THINKING|ACTION|PARAMETERS|MESSAGE|$)|$)/s);
+                const thinkingMatch = block.match(/THINKING:\s*(.*?)(?=\n(?:ACTION|PARAMETERS|MESSAGE|$)|$)/s);
+                
+                if (actionMatch && parametersMatch) {
+                    try {
+                        const parameters = JSON.parse(parametersMatch[1]);
+                        const toolCall = {
+                            thinking: thinkingMatch ? thinkingMatch[1].trim() : '',
+                            action: actionMatch[1],
+                            parameters,
+                            message: messageMatch ? messageMatch[1].trim() : ''
+                        };
+                        
+                        toolCalls.push(toolCall);
+                        console.log(chalk.gray(`🎯 Parsed tool call: ${toolCall.action}`));
+                    } catch (jsonError) {
+                        console.error(chalk.red('❌ Error parsing parameters JSON:'), jsonError.message);
+                        console.error(chalk.red('Raw parameters:'), parametersMatch[1]);
+                        
+                        // Log parsing error
+                        if (this.logger) {
+                            this.logger.logError(jsonError, {
+                                context: 'tool_call_parsing',
+                                rawResponse: block,
+                                rawParameters: parametersMatch[1],
+                                sessionId: this.sessionId
+                            }).catch(logError => {
+                                console.error(chalk.red('❌ Failed to log parsing error:'), logError.message);
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // If we found any tool calls, return the first one (backward compatibility)
+            // The remaining tool calls will be processed in handleUserRequest
+            if (toolCalls.length > 0) {
+                return toolCalls[0];
+            }
+            
+            // No tool calls found - this is normal for final responses
             return null;
         } catch (error) {
             console.error(chalk.red('❌ Error in parseToolCall:'), error.message);
@@ -399,17 +490,26 @@ Please, what can I help you with....
                     console.log(chalk.gray('-'.repeat(50)));
                 }
 
-                // Add AI response to history
-                this.conversationHistory.push({
-                    role: 'assistant',
-                    content: responseContent,
-                    usage: responseUsage
-                });
-
-                // Check if AI wants to use tools
-                const toolCall = this.parseToolCall(responseContent);
-
-                if (toolCall) {
+                // Find all tool calls in the response
+                const allToolCalls = this.extractAllToolCalls(responseContent);
+                
+                // If no tool calls are found, it's a final response
+                if (allToolCalls.length === 0) {
+                    // Add AI response to history
+                    this.conversationHistory.push({
+                        role: 'assistant',
+                        content: responseContent,
+                        usage: responseUsage
+                    });
+                    
+                    // AI is done, no more tools needed
+                    finalResponse = responseContent;
+                    break;
+                }
+                
+                // Process all tool calls
+                const toolResults = [];
+                for (const toolCall of allToolCalls) {
                     // Show AI's thinking and message to user
                     if (toolCall.thinking) {
                         console.log(`🤔 ${toolCall.thinking}`);
@@ -425,12 +525,10 @@ Please, what can I help you with....
                         name: toolCall.action,
                         success: toolResult.success
                     });
-
-                    // Add tool result to conversation
-                    const toolResultMessage = `Tool result for ${toolCall.action}: ${JSON.stringify(toolResult, null, 2)}`;
-                    this.conversationHistory.push({
-                        role: 'user',
-                        content: toolResultMessage
+                    
+                    toolResults.push({
+                        toolCall,
+                        result: toolResult
                     });
 
                     // Show tool result summary
@@ -447,11 +545,25 @@ Please, what can I help you with....
                     } else {
                         console.log(`❌ ${toolResult.error}`);
                     }
-                } else {
-                    // AI is done, no more tools needed
-                    finalResponse = responseContent;
-                    break;
                 }
+                
+                // Add consolidated tool results to conversation
+                const consolidatedResults = toolResults.map(tr => 
+                    `Tool result for ${tr.toolCall.action}:\n${JSON.stringify(tr.result, null, 2)}`
+                ).join('\n\n');
+                
+                this.conversationHistory.push({
+                    role: 'user',
+                    content: consolidatedResults
+                });
+                
+                // Add AI response to history for reference
+                // We add it after the tool results to maintain proper conversation flow
+                this.conversationHistory.push({
+                    role: 'assistant',
+                    content: responseContent,
+                    usage: responseUsage
+                });
             }
 
             if (iterations >= this.maxIterations) {
@@ -631,16 +743,25 @@ Please, what can I help you with....
 
                 const responseContent = aiResponse.message;
                 
-                // Add AI response to history
-                this.conversationHistory.push({
-                    role: 'assistant',
-                    content: responseContent
-                });
-
-                // Check if AI wants to use tools
-                const toolCall = this.parseToolCall(responseContent);
-
-                if (toolCall) {
+                // Find all tool calls in the response
+                const allToolCalls = this.extractAllToolCalls(responseContent);
+                
+                // If no tool calls are found, it's a final response
+                if (allToolCalls.length === 0) {
+                    // Add AI response to history
+                    this.conversationHistory.push({
+                        role: 'assistant',
+                        content: responseContent
+                    });
+                    
+                    // AI is done, no more tools needed
+                    finalResponse = responseContent;
+                    break;
+                }
+                
+                // Process all tool calls
+                const toolResults = [];
+                for (const toolCall of allToolCalls) {
                     // Show AI's thinking and message to user
                     if (toolCall.thinking) {
                         console.log(`🤔 ${toolCall.thinking}`);
@@ -656,12 +777,10 @@ Please, what can I help you with....
                         name: toolCall.action,
                         success: toolResult.success
                     });
-
-                    // Add tool result to conversation
-                    const toolResultMessage = `Tool result for ${toolCall.action}: ${JSON.stringify(toolResult, null, 2)}`;
-                    this.conversationHistory.push({
-                        role: 'user',
-                        content: toolResultMessage
+                    
+                    toolResults.push({
+                        toolCall,
+                        result: toolResult
                     });
 
                     // Show tool result summary
@@ -678,11 +797,23 @@ Please, what can I help you with....
                     } else {
                         console.log(`❌ ${toolResult.error}`);
                     }
-                } else {
-                    // AI is done, no more tools needed
-                    finalResponse = responseContent;
-                    break;
                 }
+                
+                // Add consolidated tool results to conversation
+                const consolidatedResults = toolResults.map(tr => 
+                    `Tool result for ${tr.toolCall.action}:\n${JSON.stringify(tr.result, null, 2)}`
+                ).join('\n\n');
+                
+                this.conversationHistory.push({
+                    role: 'user',
+                    content: consolidatedResults
+                });
+                
+                // Add AI response to history for reference
+                this.conversationHistory.push({
+                    role: 'assistant',
+                    content: responseContent
+                });
             }
 
             if (iterations >= this.maxIterations) {
