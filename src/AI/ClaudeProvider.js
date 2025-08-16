@@ -23,7 +23,7 @@ export class ClaudeProvider extends BaseAIProvider {
         
         const request = {
             model: options.model || this.getDefaultModel(),
-            max_tokens: options.max_tokens || 10000,
+            max_tokens: options.max_tokens || 8000,
             temperature: 0.3,
             messages: claudeMessages,
             stream: options.stream || false
