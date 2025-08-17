@@ -37,21 +37,20 @@ export class ToolCallHandler {
                         let cleanedParameters = parametersMatch[1];
                         
                         // 1. Cek apakah ada backtick sebagai pembatas nilai (bukan JSON valid)
-                        const backtickValuePattern = /"(\w+)"\s*:\s*`([\s\S]*?)`(?=\s*[,}])/g;
+                        const backtickValuePattern = /"([^"]+)"\s*:\s*`((?:\\`|[^`])*?)`(?=\s*[,}])/g;
                         let match;
                         while ((match = backtickValuePattern.exec(cleanedParameters)) !== null) {
                             const [fullMatch, key, value] = match;
                             // Escape newlines, tanda kutip, dll. dalam nilai backtick
                             const escapedValue = JSON.stringify(value);
-                            // Ganti backtick dengan tanda kutip yang benar
-                            cleanedParameters = cleanedParameters.replace(
-                                fullMatch, 
-                                `"${key}": ${escapedValue}`
-                            );
+                            // Ganti backtick dengan tanda kutip yang benar menggunakan posisi match untuk presisi
+                            const start = match.index;
+                            const end = start + fullMatch.length;
+                            cleanedParameters = cleanedParameters.slice(0, start) + `"${key}": ${escapedValue}` + cleanedParameters.slice(end);
                             console.log(chalk.gray(`🧹 Cleaned backtick-quoted value for '${key}' in ${actionMatch[1]} parameters`));
                         }
                         
-                        // 2. Ganti semua backtick yang tersisa dengan yang di-escape
+                        // 2. Ganti semua backtick yang tersisa dengan yang di-escape (jika ada di luar nilai)
                         cleanedParameters = cleanedParameters.replace(/`/g, '\\`');
                         
                         // 3. Perbaiki double escape yang mungkin terjadi
