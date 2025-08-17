@@ -61,10 +61,20 @@ export class BaseAIProvider {
 
     // Helper method untuk normalisasi pesan
     normalizeMessages(messages) {
-        return messages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-        }));
+        return messages.map(msg => {
+            // Base message format
+            const normalizedMsg = {
+                role: msg.role,
+                content: msg.content
+            };
+            
+            // Handle special roles like 'function'
+            if (msg.role === 'function' && msg.name) {
+                normalizedMsg.name = msg.name;
+            }
+            
+            return normalizedMsg;
+        });
     }
 
     // Helper method untuk normalisasi response

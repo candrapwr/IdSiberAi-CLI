@@ -111,47 +111,48 @@ export class ClaudeProvider extends BaseAIProvider {
                 const lines = chunk.toString().split('\n');
                 
                 for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = line.slice(6);
-                        
-                        if (data === '[DONE]') {
-                            const result = this.normalizeResponse({
-                                message: fullMessage,
-                                usage: usage
-                            }, true);
-                            
-                            result.chunks = chunks.length;
-                            
-                            this.logAPIRequest(request, result, {
-                                ...metadata,
-                                duration: Date.now() - startTime
-                            });
+                    if (line.startsWith('event: ')) {
+                        const eventType = line.slice(7).trim();
+                        const nextLine = lines[lines.indexOf(line) + 1];
+                        const data = nextLine?.startsWith('data: ') ? nextLine.slice(6).trim() : '';
 
-                            resolve(result);
-                            return;
-                        }
+                        if (!data) continue;
 
                         try {
                             const parsed = JSON.parse(data);
-                            
-                            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+
+                            if (eventType === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
                                 fullMessage += parsed.delta.text;
                                 chunks.push({
                                     content: parsed.delta.text,
                                     timestamp: Date.now()
                                 });
-                                
+
                                 // Emit chunk untuk real-time display
                                 if (metadata.onChunk) {
                                     metadata.onChunk(parsed.delta.text);
                                 }
                             }
 
-                            if (parsed.type === 'message_delta' && parsed.usage) {
+                            if (eventType === 'message_delta' && parsed.usage) {
                                 usage = parsed.usage;
                             }
+
+                            if (eventType === 'message_stop') {
+                                const result = this.normalizeResponse({
+                                    message: fullMessage,
+                                    usage: usage
+                                }, true);
+
+                                result.chunks = chunks.length;
+
+                                resolve(result);
+                            }
+
+                            // Abaikan event ping dan lainnya yang tidak relevan
                         } catch (error) {
-                            // Skip malformed JSON chunks
+                            // Skip malformed JSON
+                            this.logError(error, { context: 'stream_parse', line });
                         }
                     }
                 }
@@ -191,7 +192,6 @@ export class ClaudeProvider extends BaseAIProvider {
         });
     }
 
-    // Override untuk menambahkan model-model Claude yang tersedia
     getAvailableModels() {
         return [
             'claude-3-5-sonnet-20241022',

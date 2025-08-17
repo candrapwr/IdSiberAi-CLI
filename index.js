@@ -1,6 +1,6 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { GeneralMCPHandler } from './src/GeneralMCPHandler.js';
+import { GeneralMCPHandler } from './src/handlers/GeneralMCPHandler.js';
 import dotenv from 'dotenv';
 import path from 'path';
 
