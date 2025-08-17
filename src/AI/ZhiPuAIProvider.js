@@ -12,7 +12,7 @@ export class ZhiPuAIProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'glm-4-plus';
+        return 'glm-4.5-air';
     }
 
     async chat(messages, options = {}) {
@@ -161,6 +161,7 @@ export class ZhiPuAIProvider extends BaseAIProvider {
 
     getAvailableModels() {
         return [
+            'glm-4.5',
             'codegeex-4',
             'glm-4',
             'glm-4-air',
