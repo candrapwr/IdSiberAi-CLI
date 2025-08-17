@@ -33,30 +33,29 @@ export class ToolCallHandler {
                 
                 if (actionMatch && parametersMatch) {
                     try {
-                        // Bersihkan parameter JSON
-                        let cleanedParameters = parametersMatch[1];
-                        
-                        // 1. Cek apakah ada backtick sebagai pembatas nilai (bukan JSON valid)
-                        const backtickValuePattern = /"([^"]+)"\s*:\s*`((?:\\`|[^`])*?)`(?=\s*[,}])/g;
-                        let match;
-                        while ((match = backtickValuePattern.exec(cleanedParameters)) !== null) {
-                            const [fullMatch, key, value] = match;
-                            // Escape newlines, tanda kutip, dll. dalam nilai backtick
+                        // Ambil string parameter mentah
+                        let rawParams = parametersMatch[1];
+                        let cleanedParameters = rawParams;
+
+                        const stringValuePattern = /"([^"]+)"\s*:\s*"((?:\\.|[^"\\])*)"/gs;
+                        cleanedParameters = rawParams.replace(stringValuePattern, (match, key, value) => {
                             const escapedValue = JSON.stringify(value);
-                            // Ganti backtick dengan tanda kutip yang benar menggunakan posisi match untuk presisi
-                            const start = match.index;
-                            const end = start + fullMatch.length;
-                            cleanedParameters = cleanedParameters.slice(0, start) + `"${key}": ${escapedValue}` + cleanedParameters.slice(end);
-                            console.log(chalk.gray(`🧹 Cleaned backtick-quoted value for '${key}' in ${actionMatch[1]} parameters`));
-                        }
-                        
-                        // 2. Ganti semua backtick yang tersisa dengan yang di-escape (jika ada di luar nilai)
-                        cleanedParameters = cleanedParameters.replace(/`/g, '\\`');
-                        
-                        // 3. Perbaiki double escape yang mungkin terjadi
-                        cleanedParameters = cleanedParameters.replace(/\\\\`/g, '\\`');
-                        
+                            console.log(chalk.gray(`🧹 Cleaned and properly escaped string value for key '${key}'`));
+                            return `"${key}": ${escapedValue}`;
+                        });
+
+                        // 2. Sebagai fallback, jalankan logika lama Anda untuk kasus spesifik di mana
+                        // nilai dibungkus dengan backtick, bukan tanda kutip (bukan JSON valid).
+                        const backtickValuePattern = /"([^"]+)"\s*:\s*`((?:\\`|[^`])*?)`(?=\s*[,}])/g;
+                        cleanedParameters = cleanedParameters.replace(backtickValuePattern, (match, key, value) => {
+                            const escapedValue = JSON.stringify(value);
+                            console.log(chalk.gray(`🧹 Cleaned backtick-quoted value for key '${key}' in ${actionMatch[1]} parameters`));
+                            return `"${key}": ${escapedValue}`;
+                        });
+
+                        // String `cleanedParameters` sekarang seharusnya sudah menjadi JSON yang valid
                         const parameters = JSON.parse(cleanedParameters);
+                        
                         const toolCall = {
                             thinking: thinkingMatch ? thinkingMatch[1].trim() : '',
                             action: actionMatch[1],
@@ -65,7 +64,9 @@ export class ToolCallHandler {
                         };
                         
                         toolCalls.push(toolCall);
+
                     } catch (jsonError) {
+                        // Blok catch Anda sudah bagus, tidak perlu diubah.
                         console.error(chalk.red(`❌ Error parsing parameters JSON for ${actionMatch[1]}:`), jsonError.message);
                         console.error(chalk.red('Raw parameters:'), parametersMatch[1]);
                         
