@@ -93,11 +93,6 @@ export class ZhiPuAIProvider extends BaseAIProvider {
                             }, true);
                             
                             result.chunks = chunks.length;
-                            
-                            this.logAPIRequest(request, result, {
-                                ...metadata,
-                                duration: Date.now() - startTime
-                            });
 
                             resolve(result);
                             return;

@@ -22,7 +22,8 @@ export class OpenAIProvider extends BaseAIProvider {
             messages: this.normalizeMessages(messages),
             temperature: 0.3,
             max_tokens: options.max_tokens || 10000,
-            stream: options.stream || false
+            stream: options.stream || false,
+            stream_options: options.stream ? {include_usage:true} : null
         };
 
         try {
@@ -93,11 +94,6 @@ export class OpenAIProvider extends BaseAIProvider {
                             }, true);
                             
                             result.chunks = chunks.length;
-                            
-                            this.logAPIRequest(request, result, {
-                                ...metadata,
-                                duration: Date.now() - startTime
-                            });
 
                             resolve(result);
                             return;
