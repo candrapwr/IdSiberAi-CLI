@@ -39,18 +39,48 @@ export class ToolCallHandler {
 
                         const stringValuePattern = /"([^"]+)"\s*:\s*"((?:\\.|[^"\\])*)"/gs;
                         cleanedParameters = rawParams.replace(stringValuePattern, (match, key, value) => {
-                            const escapedValue = JSON.stringify(value);
-                            console.log(chalk.gray(`🧹 Cleaned and properly escaped string value for key '${key}'`));
-                            return `"${key}": ${escapedValue}`;
+                            // FIX: Jangan gunakan JSON.stringify yang akan double-escape
+                            // Cukup escape quotes dan backslashes yang memang perlu di-escape
+                            let cleanValue = value
+                                .replace(/\\\\/g, '\\')     // Unescape double backslashes
+                                .replace(/\\"/g, '"')       // Unescape quotes
+                                .replace(/\\n/g, '\n')      // Convert literal \n to actual newlines
+                                .replace(/\\t/g, '\t')      // Convert literal \t to actual tabs
+                                .replace(/\\r/g, '\r');     // Convert literal \r to actual carriage returns
+                            
+                            // Sekarang escape untuk JSON yang proper
+                            cleanValue = cleanValue
+                                .replace(/\\/g, '\\\\')     // Escape backslashes
+                                .replace(/"/g, '\\"')       // Escape quotes
+                                .replace(/\n/g, '\\n')      // Escape newlines
+                                .replace(/\t/g, '\\t')      // Escape tabs
+                                .replace(/\r/g, '\\r');     // Escape carriage returns
+                            
+                            console.log(chalk.gray(`🧹 Properly cleaned string value for key '${key}'`));
+                            return `"${key}": "${cleanValue}"`;
                         });
 
                         // 2. Sebagai fallback, jalankan logika lama Anda untuk kasus spesifik di mana
                         // nilai dibungkus dengan backtick, bukan tanda kutip (bukan JSON valid).
                         const backtickValuePattern = /"([^"]+)"\s*:\s*`((?:\\`|[^`])*?)`(?=\s*[,}])/g;
                         cleanedParameters = cleanedParameters.replace(backtickValuePattern, (match, key, value) => {
-                            const escapedValue = JSON.stringify(value);
+                            // FIX: Sama seperti di atas, jangan double-escape
+                            let cleanValue = value
+                                .replace(/\\`/g, '`')       // Unescape backticks
+                                .replace(/\\n/g, '\n')      // Convert literal \n to actual newlines
+                                .replace(/\\t/g, '\t')      // Convert literal \t to actual tabs
+                                .replace(/\\r/g, '\r');     // Convert literal \r to actual carriage returns
+                            
+                            // Escape untuk JSON
+                            cleanValue = cleanValue
+                                .replace(/\\/g, '\\\\')     // Escape backslashes
+                                .replace(/"/g, '\\"')       // Escape quotes
+                                .replace(/\n/g, '\\n')      // Escape newlines
+                                .replace(/\t/g, '\\t')      // Escape tabs
+                                .replace(/\r/g, '\\r');     // Escape carriage returns
+                            
                             console.log(chalk.gray(`🧹 Cleaned backtick-quoted value for key '${key}' in ${actionMatch[1]} parameters`));
-                            return `"${key}": ${escapedValue}`;
+                            return `"${key}": "${cleanValue}"`;
                         });
 
                         // String `cleanedParameters` sekarang seharusnya sudah menjadi JSON yang valid
