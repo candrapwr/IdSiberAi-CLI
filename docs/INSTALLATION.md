@@ -5,6 +5,7 @@
 - **Node.js** 18+ (recommended: 20+)
 - **npm** 9+ or **yarn** 3+
 - **Terminal/Command Line** access
+- **Web Browser** for web interface mode
 - **Internet connection** for AI providers
 
 ## 🚀 Quick Installation
@@ -65,6 +66,11 @@ MAX_ITERATIONS=50
 ENABLE_LOGGING=true
 ENABLE_STREAMING=true
 DEFAULT_AI_PROVIDER=DeepSeek
+
+# =================================
+# WEB INTERFACE CONFIGURATION
+# =================================
+WEB_PORT=3000
 
 # =================================
 # S3 CLOUD STORAGE (Optional)
@@ -155,6 +161,9 @@ NODE_ENV=development
 # Logging settings
 ENABLE_LOGGING=true
 LOG_RETENTION_DAYS=30
+
+# Web interface settings
+WEB_PORT=3000
 ```
 
 ### AI Provider Preferences
@@ -314,8 +323,9 @@ node --max-old-space-size=4096 index.js
 
 1. **[AI Providers Guide](./AI_PROVIDERS.md)** - Configure multiple AI providers
 2. **[Tools Reference](./TOOLS.md)** - Learn about available tools
-3. **[Usage Examples](./EXAMPLES.md)** - See real-world examples
-4. **[S3 Integration](./S3_GUIDE.md)** - Set up cloud storage
+3. **[Web Interface Guide](./WEB_INTERFACE.md)** - Learn how to use the web interface
+4. **[Usage Examples](./EXAMPLES.md)** - See real-world examples
+5. **[S3 Integration](./S3_GUIDE.md)** - Set up cloud storage
 
 ## 📞 Getting Help
 

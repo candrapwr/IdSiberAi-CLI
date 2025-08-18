@@ -11,6 +11,7 @@
 - 🤖 **Multi-AI Support** - DeepSeek, OpenAI, Claude, Grok, ZhiPuAI, QwenAI
 - 🔄 **Provider Switching** - Switch AI providers on the fly
 - 🛡️ **Auto Fallback** - Automatic provider switching on failures
+- 🌐 **Dual Interface** - Choose between CLI and Web interfaces
 - ☁️ **Cloud Storage** - Integrated S3 operations (AWS SDK v3)
 - 🛠️ **20+ Tools** - File ops, analysis, system automation, S3
 - 📊 **Smart Analysis** - Language-aware code structure analysis
@@ -32,7 +33,8 @@ cp .env.example .env
 # 3. Start the assistant
 npm start
 
-# 4. Start chatting!
+# 4. Choose interface mode (CLI or Web)
+# 5. Start chatting!
 You: "What can you help me with?"
 ```
 
@@ -42,6 +44,7 @@ You: "What can you help me with?"
 - 🤖 **[AI Providers](./docs/AI_PROVIDERS.md)** - Multi-AI configuration
 - 🛠️ **[Available Tools](./docs/TOOLS.md)** - Complete tools reference
 - ☁️ **[S3 Integration](./docs/S3_GUIDE.md)** - Cloud storage operations
+- 🌐 **[Web Interface](./docs/WEB_INTERFACE.md)** - Browser-based UI guide
 - 💻 **[Usage Examples](./docs/EXAMPLES.md)** - Real-world use cases
 - 🔧 **[Troubleshooting](./docs/TROUBLESHOOTING.md)** - Common issues & solutions
 - 📊 **[Performance](./docs/PERFORMANCE.md)** - Monitoring & optimization
@@ -166,7 +169,13 @@ You: /stats
 
 ## 📝 Changelog
 
-### v2.1.0 (Latest) - Multi-AI & Cloud Edition
+### v2.2.0 (Latest) - Web Interface & Multi-AI Edition
+- 🌐 **Web Interface** - New browser-based user interface
+- 🖥️ **Dual Mode** - Choose between CLI and Web interfaces
+- 🔄 **Real-time Updates** - Socket.io for live responses in web mode
+- 📱 **Responsive Design** - Mobile-friendly web interface
+
+### v2.1.0 - Multi-AI & Cloud Edition
 - ✨ **Multi-AI Support** - 6 AI providers with auto-switching
 - ☁️ **S3 Integration** - Cloud storage operations (AWS SDK v3)
 - 🌊 **Streaming Mode** - Real-time response generation  
