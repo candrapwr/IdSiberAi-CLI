@@ -184,19 +184,14 @@ class GeneralMCPCLI {
                 
                 const startTime = Date.now();
                 
-                // Use fallback if enabled in environment
+                // Fallback is now handled automatically in RequestHandler
+                // based on ENABLE_AI_FALLBACK environment variable
                 const useFallback = process.env.ENABLE_AI_FALLBACK === 'true';
-                let result;
-                
                 if (useFallback) {
                     console.log(chalk.gray(`🔄 Fallback enabled: Will try other providers if needed`));
-                    result = await this.mcp.handleUserRequestWithFallback(userInput, {
-                        switchOnSuccess: true // Switch to successful provider if fallback works
-                    });
-                } else {
-                    result = await this.mcp.handleUserRequest(userInput);
                 }
                 
+                const result = await this.mcp.handleUserRequest(userInput);
                 const endTime = Date.now();
 
                 if (!this.streamMode) {

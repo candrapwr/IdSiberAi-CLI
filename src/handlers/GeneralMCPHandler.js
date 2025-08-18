@@ -187,12 +187,8 @@ export class GeneralMCPHandler {
     }
 
     // User request handling methods - delegate to RequestHandler
-    async handleUserRequest(userInput) {
-        return await this.requestHandler.handleUserRequest(userInput);
-    }
-
-    async handleUserRequestWithFallback(userInput, options = {}) {
-        return await this.requestHandler.handleUserRequestWithFallback(userInput, options);
+    async handleUserRequest(userInput, options = {}) {
+        return await this.requestHandler.handleUserRequest(userInput, options);
     }
 
     // Logging methods - delegate to LoggingHandler
