@@ -259,6 +259,7 @@ export class FileTools {
             // Apply edits
             let editsMade = 0;
             const originalContent = content; // Store original for diff
+            const editResults = []; // Track each edit result
             
             // Make sure edits is an array
             if (!Array.isArray(edits)) {
@@ -266,29 +267,142 @@ export class FileTools {
             }
             
             // Process each edit
-            for (const edit of edits) {
-                if (!edit.oldText || !edit.newText) {
-                    continue; // Skip invalid edits
-                }
+            for (let i = 0; i < edits.length; i++) {
+                const edit = edits[i];
                 
-                // Handle backticks dalam old dan new text
-                const escapedOldText = this.sanitizeBackticks(edit.oldText);
-                const escapedNewText = this.sanitizeBackticks(edit.newText);
-                
-                // Count how many times the old text appears
-                const occurrences = (content.match(new RegExp(this.escapeRegExp(escapedOldText), 'g')) || []).length;
-                
-                if (occurrences === 0) {
-                    // Text not found
+                // Validate edit parameters
+                if (!edit || typeof edit !== 'object') {
+                    editResults.push({
+                        index: i,
+                        success: false,
+                        error: 'Invalid edit object',
+                        oldText: 'N/A',
+                        newText: 'N/A'
+                    });
                     continue;
-                } else if (occurrences > 1) {
-                    // Multiple occurrences found, warning but continue
-                    console.warn(`Warning: Found ${occurrences} occurrences of the specified text in ${filePath}. All will be replaced.`);
                 }
                 
-                // Replace the text
-                content = content.replace(new RegExp(this.escapeRegExp(escapedOldText), 'g'), escapedNewText);
-                editsMade += occurrences;
+                if (!edit.oldText) {
+                    editResults.push({
+                        index: i,
+                        success: false,
+                        error: 'Missing oldText parameter',
+                        oldText: edit.oldText || 'N/A',
+                        newText: edit.newText || 'N/A'
+                    });
+                    continue;
+                }
+                
+                if (edit.newText === undefined || edit.newText === null) {
+                    editResults.push({
+                        index: i,
+                        success: false,
+                        error: 'Missing newText parameter',
+                        oldText: edit.oldText || 'N/A',
+                        newText: 'N/A'
+                    });
+                    continue;
+                }
+                
+                // Clean the text - remove the problematic sanitization
+                const oldText = String(edit.oldText);
+                const newText = String(edit.newText);
+                
+                console.log(chalk.blue(`🔍 Searching for text: "${oldText.substring(0, 50)}${oldText.length > 50 ? '...' : ''}"`));
+                
+                // Try multiple matching strategies
+                let occurrences = 0;
+                let replacedContent = content;
+                let matchStrategy = 'none';
+                
+                // Strategy 1: Exact match
+                const exactMatches = (content.match(new RegExp(this.escapeRegExp(oldText), 'g')) || []).length;
+                if (exactMatches > 0) {
+                    replacedContent = content.replace(new RegExp(this.escapeRegExp(oldText), 'g'), newText);
+                    occurrences = exactMatches;
+                    matchStrategy = 'exact';
+                    console.log(chalk.green(`✅ Exact match found: ${exactMatches} occurrence(s)`));
+                } else {
+                    // Strategy 2: Whitespace-flexible match
+                    const flexibleRegex = new RegExp(this.escapeRegExp(oldText).replace(/\\\s+/g, '\\s+'), 'g');
+                    const flexibleMatches = (content.match(flexibleRegex) || []).length;
+                    
+                    if (flexibleMatches > 0) {
+                        replacedContent = content.replace(flexibleRegex, newText);
+                        occurrences = flexibleMatches;
+                        matchStrategy = 'flexible_whitespace';
+                        console.log(chalk.yellow(`⚡ Flexible whitespace match found: ${flexibleMatches} occurrence(s)`));
+                    } else {
+                        // Strategy 3: Line-based match (remove leading/trailing whitespace)
+                        const trimmedOldText = oldText.trim();
+                        const lineRegex = new RegExp(this.escapeRegExp(trimmedOldText), 'g');
+                        const lineMatches = (content.match(lineRegex) || []).length;
+                        
+                        if (lineMatches > 0) {
+                            replacedContent = content.replace(lineRegex, newText);
+                            occurrences = lineMatches;
+                            matchStrategy = 'trimmed';
+                            console.log(chalk.yellow(`📝 Trimmed match found: ${lineMatches} occurrence(s)`));
+                        } else {
+                            // Strategy 4: Case-insensitive match (as last resort)
+                            const caseInsensitiveRegex = new RegExp(this.escapeRegExp(oldText), 'gi');
+                            const caseMatches = (content.match(caseInsensitiveRegex) || []).length;
+                            
+                            if (caseMatches > 0) {
+                                replacedContent = content.replace(caseInsensitiveRegex, newText);
+                                occurrences = caseMatches;
+                                matchStrategy = 'case_insensitive';
+                                console.log(chalk.yellow(`🔤 Case-insensitive match found: ${caseMatches} occurrence(s)`));
+                            }
+                        }
+                    }
+                }
+                
+                if (occurrences > 0) {
+                    content = replacedContent;
+                    editsMade += occurrences;
+                    
+                    if (occurrences > 1) {
+                        console.warn(chalk.yellow(`⚠️ Multiple occurrences (${occurrences}) found and replaced`));
+                    }
+                    
+                    editResults.push({
+                        index: i,
+                        success: true,
+                        occurrences: occurrences,
+                        oldText: oldText.substring(0, 100),
+                        newText: newText.substring(0, 100),
+                        strategy: matchStrategy
+                    });
+                } else {
+                    // Provide detailed debugging info
+                    const lines = content.split('\n');
+                    const oldTextLines = oldText.split('\n');
+                    
+                    console.log(chalk.red(`❌ Text not found: "${oldText.substring(0, 100)}${oldText.length > 100 ? '...' : ''}"`));
+                    console.log(chalk.gray(`📄 File has ${lines.length} lines, search text has ${oldTextLines.length} lines`));
+                    
+                    // Show similar lines for debugging
+                    const similarLines = lines.filter(line => 
+                        line.toLowerCase().includes(oldText.toLowerCase().substring(0, 20))
+                    ).slice(0, 3);
+                    
+                    if (similarLines.length > 0) {
+                        console.log(chalk.gray(`🔍 Similar lines found:`));
+                        similarLines.forEach(line => {
+                            console.log(chalk.gray(`   "${line.substring(0, 80)}${line.length > 80 ? '...' : ''}"`));
+                        });
+                    }
+                    
+                    editResults.push({
+                        index: i,
+                        success: false,
+                        error: 'Text not found in file',
+                        oldText: oldText.substring(0, 100),
+                        newText: newText.substring(0, 100),
+                        suggestions: similarLines.length > 0 ? 'Similar text found (see console)' : 'No similar text found'
+                    });
+                }
             }
             
             // Only write if changes were made
@@ -298,36 +412,49 @@ export class FileTools {
                 // Generate a simple diff
                 const diff = this.generateDiff(originalContent, content);
                 
+                const successfulEdits = editResults.filter(r => r.success);
+                const failedEdits = editResults.filter(r => !r.success);
+                
                 return {
                     success: true,
                     path: filePath,
                     editsApplied: editsMade,
+                    totalEdits: edits.length,
+                    successfulEdits: successfulEdits.length,
+                    failedEdits: failedEdits.length,
+                    editResults: editResults,
                     diff: diff,
-                    message: `File edited: ${filePath} (${editsMade} changes)`
+                    message: `File edited: ${filePath} (${editsMade} changes from ${successfulEdits.length}/${edits.length} edits)`
                 };
             } else {
+                const failedEdits = editResults.filter(r => !r.success);
+                
                 return {
                     success: false,
                     path: filePath,
                     error: 'No matching text found to edit',
-                    message: 'No changes were made to the file'
+                    totalEdits: edits.length,
+                    failedEdits: failedEdits.length,
+                    editResults: editResults,
+                    message: `No changes were made to the file. ${failedEdits.length} edits failed.`,
+                    suggestions: 'Check the exact text to be replaced, including whitespace and capitalization'
                 };
             }
         } catch (error) {
             return {
                 success: false,
-                error: error.message
+                error: error.message,
+                path: filePath
             };
         }
     }
 
-    // Sanitize backticks in text to ensure proper handling
-    sanitizeBackticks(text) {
-        if (!text) return text;
+    // Sanitize backticks in text to ensure proper handling (updated to be less aggressive)
+    sanitizeBackticks(text, shouldSanitize = false) {
+        if (!text || !shouldSanitize) return text;
         
-        // 1. Ganti semua backtick yang tidak di-escape dengan yang di-escape
+        // Only sanitize if explicitly requested
         let sanitized = text.replace(/`/g, '\\`');
-        // 2. Perbaiki double escape yang mungkin terjadi
         sanitized = sanitized.replace(/\\\\`/g, '\\`');
         
         return sanitized;
