@@ -39,6 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
     // Form submission
     messageForm.addEventListener('submit', handleFormSubmit);
+    userInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleFormSubmit(e);
+        }
+    });
     
     // Auto-resize textarea
     userInput.addEventListener('input', autoResizeTextarea);
@@ -228,7 +234,7 @@ function populateProvidersList(providers, providersInfo, currentProvider) {
                 </div>
                 ${isActive ? '<span class="badge bg-primary">Current</span>' : ''}
             </div>
-            <div class="small text-muted">
+            <div class="small session-details">
                 ${providerInfo.defaultModel}
             </div>
         `;
