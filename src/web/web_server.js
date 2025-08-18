@@ -96,13 +96,12 @@ export class WebServer {
             // Configure stream handler for this socket
             const streamHandler = (chunk) => {
                 // Log chunk size for debugging
-                // console.log(`Sending chunk of ${chunk.length} chars`);
                 socket.emit('stream-chunk', { chunk });
             };
             
             // Configure tool execution handler for this socket
             const toolExecutionHandler = (toolName, result) => {
-                console.log(`Tool executed: ${toolName}`);
+                socket.emit('stream-chunk', {chunk: 'tool-start'});
                 socket.emit('tool-execution', {
                     tool: toolName,
                     result: result

@@ -276,8 +276,8 @@ html, body {
     padding: 1rem 1.25rem;
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    max-width: 95%;
-    width: 95%;
+    max-width: 100%;
+    width: 100%;
 }
 
 .message-assistant {
