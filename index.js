@@ -49,6 +49,7 @@ class GeneralMCPCLI {
             console.log(chalk.gray(`Available Tools: ${this.mcp.getToolsList().length} tools`));
             console.log(chalk.gray(`Logging: ${config.enableLogging ? '✅ Enabled' : '❌ Disabled'}`));
             console.log(chalk.gray(`Stream Mode: ${config.streamMode ? '✅ Enabled' : '❌ Disabled'}`));
+            console.log(chalk.gray(`AI Fallback: ${config.enableAIFallback ? '✅ Enabled' : '❌ Disabled'}`));
             
             const sessionInfo = this.mcp.getSessionInfo();
             console.log(chalk.gray(`Session ID: ${sessionInfo.sessionId}`));
@@ -79,7 +80,8 @@ class GeneralMCPCLI {
                 workingDirectory: path.resolve(process.env.WORKING_DIRECTORY || './workspace'),
                 maxIterations: parseInt(process.env.MAX_ITERATIONS) || 15,
                 enableLogging: process.env.ENABLE_LOGGING === 'true',
-                streamMode: process.env.ENABLE_STREAMING === 'true'
+                streamMode: process.env.ENABLE_STREAMING === 'true',
+                enableAIFallback: process.env.ENABLE_AI_FALLBACK === 'true'
             };
         } catch (error) {
             return null;
@@ -181,7 +183,20 @@ class GeneralMCPCLI {
                 }
                 
                 const startTime = Date.now();
-                const result = await this.mcp.handleUserRequest(userInput);
+                
+                // Use fallback if enabled in environment
+                const useFallback = process.env.ENABLE_AI_FALLBACK === 'true';
+                let result;
+                
+                if (useFallback) {
+                    console.log(chalk.gray(`🔄 Fallback enabled: Will try other providers if needed`));
+                    result = await this.mcp.handleUserRequestWithFallback(userInput, {
+                        switchOnSuccess: true // Switch to successful provider if fallback works
+                    });
+                } else {
+                    result = await this.mcp.handleUserRequest(userInput);
+                }
+                
                 const endTime = Date.now();
 
                 if (!this.streamMode) {
@@ -274,6 +289,10 @@ class GeneralMCPCLI {
 
             case '/switch':
                 await this.switchAIProvider();
+                break;
+
+            case '/fallback':
+                await this.toggleFallbackMode();
                 break;
 
             case '/test':
@@ -410,6 +429,21 @@ class GeneralMCPCLI {
             console.log(chalk.gray('AI responses will be shown after completion'));
         }
     }
+    
+    async toggleFallbackMode() {
+        const currentValue = process.env.ENABLE_AI_FALLBACK === 'true';
+        const newValue = !currentValue;
+        process.env.ENABLE_AI_FALLBACK = newValue.toString();
+        
+        console.log(chalk.cyan(`🛡️ AI Fallback Mode: ${newValue ? 'Enabled' : 'Disabled'}`));
+        if (newValue) {
+            console.log(chalk.gray('System will automatically try other providers if the current one fails'));
+            console.log(chalk.gray('Note: This setting is temporary and will reset when the application restarts'));
+            console.log(chalk.gray('To make it permanent, edit the ENABLE_AI_FALLBACK value in your .env file'));
+        } else {
+            console.log(chalk.gray('System will only use the currently selected provider'));
+        }
+    }
 
     async showLogs() {
         console.log(chalk.cyan.bold('\n📜 Logs Management'));
@@ -521,6 +555,7 @@ class GeneralMCPCLI {
         console.log(chalk.cyan('Current Session:'));
         console.log(`  Session ID: ${sessionInfo.sessionId}`);
         console.log(`  Stream Mode: ${sessionInfo.streamMode ? '✅' : '❌'}`);
+        console.log(`  AI Fallback: ${process.env.ENABLE_AI_FALLBACK === 'true' ? '✅ Enabled' : '❌ Disabled'}`);
         console.log(`  Max Iterations: ${sessionInfo.maxIterations}`);
         console.log(`  Conversation Length: ${sessionInfo.conversationLength}`);
         console.log(`  Tools Available: ${sessionInfo.toolsCount}`);
@@ -571,6 +606,7 @@ class GeneralMCPCLI {
         console.log('  /ai       - Show AI providers information');
         console.log('  /providers- Show AI providers information');
         console.log('  /switch   - Switch between AI providers');
+        console.log('  /fallback - Toggle AI fallback mode');
         console.log('  /test     - Test all AI providers');
         
         console.log('  /exit     - Exit the application');

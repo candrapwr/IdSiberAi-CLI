@@ -229,6 +229,7 @@ export class GeneralMCPHandler {
         return {
             sessionId: this.sessionId,
             streamMode: this.streamMode,
+            enableAIFallback: process.env.ENABLE_AI_FALLBACK === 'true',
             maxIterations: this.maxIterations,
             toolsCount: Object.keys(this.availableTools).length,
             conversationLength: this.conversationHandler.getMessageCount() - 1,
