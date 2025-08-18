@@ -123,13 +123,13 @@ flowchart TD
 
 ## 🤖 Supported AI Providers
 
-| Provider | Status | Features |
-|----------|--------|----------|
-| **DeepSeek** | ✅ Active | Fast responses, coding tasks |
-| **OpenAI GPT** | ✅ Active | General purpose, advanced reasoning |
-| **Claude** | ✅ Active | Long context, analysis tasks |
-| **Grok** | ✅ Active | Real-time data, creative tasks |
-| **ZhiPuAI** | ✅ Active | Multilingual, specialized tasks |
+| Provider | Status | Features | Recommendation |
+|----------|--------|----------|----------|
+| **DeepSeek** | ✅ Active | Fast responses, coding tasks | all model |
+| **OpenAI GPT** | ✅ Active | General purpose, advanced reasoning | gpt-4o, gpt-5 |
+| **Claude** | ✅ Active | Long context, analysis tasks | all model |
+| **Grok** | ✅ Active | Real-time data, creative tasks | grok-4-0709 |
+| **ZhiPuAI** | ✅ Active | Multilingual, specialized tasks | glm-4, glm-4.5 |
 
 [→ See detailed AI provider guide](./docs/AI_PROVIDERS.md)
 
