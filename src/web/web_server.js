@@ -93,9 +93,20 @@ export class WebServer {
             this.activeConnections++;
             console.log(chalk.green(`🔌 Client connected (${this.activeConnections} active connections)`));
             
-            // Configure stream handler for this connection
-            const handleStreamChunk = (chunk) => {
+            // Configure stream handler for this socket
+            const streamHandler = (chunk) => {
+                // Log chunk size for debugging
+                // console.log(`Sending chunk of ${chunk.length} chars`);
                 socket.emit('stream-chunk', { chunk });
+            };
+            
+            // Configure tool execution handler for this socket
+            const toolExecutionHandler = (toolName, result) => {
+                console.log(`Tool executed: ${toolName}`);
+                socket.emit('tool-execution', {
+                    tool: toolName,
+                    result: result
+                });
             };
             
             // Send initial session info
@@ -105,15 +116,9 @@ export class WebServer {
             socket.on('user-message', async (data) => {
                 const { message } = data;
                 
-                // Configure streaming for this request with custom handler for this socket
-                const streamHandler = (chunk) => {
-                    // Log chunk size for debugging
-                    // console.log(`Sending chunk of ${chunk.length} chars`);
-                    socket.emit('stream-chunk', { chunk });
-                };
-                
-                // Set stream mode with our custom handler
+                // Set stream mode and tool execution handlers
                 this.mcpHandler.setStreamMode(true, streamHandler);
+                this.mcpHandler.setToolExecutionHandler(toolExecutionHandler);
                 
                 // Reset any previous stream state
                 socket.emit('reset-stream', {});
@@ -137,7 +142,7 @@ export class WebServer {
                     });
                     
                     // Log completion
-                    console.log(`Response completed in ${endTime - startTime}ms`);
+                    console.log(`IdSiberAi response completed in ${endTime - startTime}ms`);
                     
                 } catch (error) {
                     console.error('Error processing message:', error);
