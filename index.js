@@ -627,7 +627,7 @@ class GeneralMCPCLI {
 
 // Main execution
 async function main() {
-    console.log(chalk.blue.bold('🚀 IdSiberAi Assistant - Multi-AI Edition'));
+    console.log(chalk.blue.bold('🚀 Multi-AI CLI with Web Interface'));
     console.log(chalk.gray('AI-Powered File System & Automation Assistant with Multiple AI Providers'));
     console.log(chalk.gray('='.repeat(70)));
     
@@ -639,7 +639,7 @@ async function main() {
             message: 'Select application mode:',
             choices: [
                 { name: 'CLI Mode - Command Line Interface', value: 'cli' },
-                { name: 'Web Mode - Web Browser Interface', value: 'web' }
+                { name: 'IdSiberAi Terminal - Web Browser Interface', value: 'web' }
             ],
             default: 'cli'
         }
@@ -656,7 +656,7 @@ async function main() {
         }
     } else {
         // Initialize Web mode
-        console.log(chalk.yellow('Initializing Web mode...'));
+        console.log(chalk.yellow('Initializing IdSiberAi Terminal web interface...'));
         
         try {
             // Get web server port from environment or use default
@@ -670,7 +670,7 @@ async function main() {
                 const webServer = new WebServer(mcpHandler, port);
                 await webServer.start();
                 
-                console.log(chalk.green.bold(`✅ Web interface is now available at http://localhost:${port}`));
+                console.log(chalk.green.bold(`✅ IdSiberAi Terminal is now available at http://localhost:${port}`));
                 console.log(chalk.gray('Press Ctrl+C to stop the server'));
                 
                 // Keep the process running
@@ -680,7 +680,7 @@ async function main() {
                 process.exit(1);
             }
         } catch (error) {
-            console.log(chalk.red(`❌ Error initializing Web mode: ${error.message}`));
+            console.log(chalk.red(`❌ Error initializing web interface: ${error.message}`));
             process.exit(1);
         }
     }
