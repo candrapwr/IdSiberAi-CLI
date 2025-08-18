@@ -86,9 +86,7 @@ export function handleResetStream() {
 }
 
 // Handle tool execution
-export function handleToolExecution(data) {
-    console.log('Tool execution received:', data);
-    
+export function handleToolExecution(data) {    
     // Create a system message for the tool execution
     const systemMessageDiv = document.createElement('div');
     systemMessageDiv.className = 'system-message';
@@ -137,22 +135,27 @@ export function handleStreamChunk(data) {
             </div>
         `;
         document.getElementById('messagesContainer').appendChild(streamMessageDiv);
-        console.log('Created new message div for streaming');
     }
     
     // Append chunk to current message
     if (data && data.chunk) {
-        currentMessageContent += data.chunk;
-        
-        // Format and update the content
-        const contentDiv = streamMessageDiv.querySelector('.message-content');
-        contentDiv.innerHTML = formatAssistantMessage(currentMessageContent);
-        
-        // Apply syntax highlighting
-        highlightCodeBlocks();
-        
-        // Scroll to the bottom
-        scrollToBottom();
+        if(data.chunk != 'tool-start'){
+            currentMessageContent += data.chunk;
+            
+            // Format and update the content
+            const contentDiv = streamMessageDiv.querySelector('.message-content');
+            contentDiv.innerHTML = formatAssistantMessage(currentMessageContent);
+            
+            // Apply syntax highlighting
+            highlightCodeBlocks();
+            
+            // Scroll to the bottom
+            scrollToBottom();
+        }else{
+            streamMessageDiv = null;
+            currentMessageContent = '';
+            streamStarted = false;
+        }
     } else {
         console.warn('Received empty chunk');
     }
@@ -160,8 +163,7 @@ export function handleStreamChunk(data) {
 
 // Handle complete assistant response
 export function handleAssistantResponse(data) {
-    console.log('Received complete response:', data);
-    
+
     // Hide typing indicator
     hideTypingIndicator();
     
@@ -175,7 +177,6 @@ export function handleAssistantResponse(data) {
         });
     } else {
         // Update the metadata of the streamed message
-        console.log('Updating metadata for streamed message');
         const lastMessage = document.getElementById('messagesContainer').lastElementChild;
         if (lastMessage && lastMessage.classList.contains('message-assistant')) {
             const metaDiv = lastMessage.querySelector('.message-meta');

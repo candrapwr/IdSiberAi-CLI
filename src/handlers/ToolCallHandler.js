@@ -213,17 +213,12 @@ export class ToolCallHandler {
             console.log(chalk.blue(`✅ Tool executed successfully in ${Date.now() - startTime}ms`));
             
             // Call the tool execution handler if available
-            console.log('Tool executed successfully:', action, '- Handler available:', !!this.onToolExecution);
             if (this.onToolExecution) {
-                console.log('Calling tool execution handler for:', action);
                 try {
                     this.onToolExecution(action, normalizedResult);
-                    console.log('Tool execution handler called successfully');
                 } catch (handlerError) {
                     console.error('Error in tool execution handler:', handlerError.message);
                 }
-            } else {
-                console.warn('No tool execution handler available to notify UI');
             }
             
             return normalizedResult;
