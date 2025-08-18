@@ -44,6 +44,7 @@ MESSAGE: [brief action description]
 - s3_download(key, download_path): Download file from S3  
 - s3_delete(key): Delete file from S3
 - s3_search(prefix, max_keys): Search files in S3
+- s3_set_acl(key, acl): Change file access permissions ('private'|'public-read'|'public-read-write'|etc)
 
 
 # Response rules

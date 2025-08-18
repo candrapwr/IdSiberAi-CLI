@@ -90,6 +90,7 @@ export class GeneralMCPHandler {
             s3_download: this.tools.s3Download.bind(this.tools),
             s3_delete: this.tools.s3Delete.bind(this.tools),
             s3_search: this.tools.s3Search.bind(this.tools),
+            s3_set_acl: this.tools.s3SetAcl.bind(this.tools),
             s3_get_client_info: this.tools.s3GetClientInfo.bind(this.tools),
             
             // AI Management Operations
