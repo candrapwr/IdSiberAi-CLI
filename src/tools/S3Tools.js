@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, PutObjectAclCommand } from '@aws-sdk/client-s3';
 import fs from 'fs/promises';
 import path from 'path';
 import { ValidationHelper } from './ValidationHelper.js';
@@ -206,5 +206,39 @@ export class S3Tools {
       sdkVersion: '3.x',
       message: `S3 client configured for bucket: ${this.bucket}`
     };
+  }
+
+  /**
+   * Set ACL (Access Control List) for S3 object
+   * @param {string} key - S3 object key
+   * @param {string} acl - ACL type ('private'|'public-read'|'public-read-write'|etc)
+   * @AI_PROPERTY - Returns standardized response format for AI processing
+   */
+  async setAcl(key, acl = 'private') {
+    try {
+      const command = new PutObjectAclCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ACL: acl
+      });
+
+      const result = await this.s3Client.send(command);
+      
+      return {
+        success: true,
+        operation: 'setAcl',
+        key,
+        acl,
+        message: `ACL set to ${acl} for s3://${this.bucket}/${key}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        operation: 'setAcl',
+        error: error.message,
+        key,
+        acl
+      };
+    }
   }
 }

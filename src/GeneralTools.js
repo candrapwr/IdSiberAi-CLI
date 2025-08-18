@@ -109,4 +109,8 @@ export class GeneralTools {
     async s3GetClientInfo() {
         return await this.s3Tools.getClientInfo();
     }
+
+    async s3SetAcl(key, acl = 'private') {
+        return await this.s3Tools.setAcl(key, acl);
+    }
 }
