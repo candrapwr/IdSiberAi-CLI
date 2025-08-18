@@ -19,6 +19,7 @@ export class GeneralMCPHandler {
         this.maxIterations = maxIterations;
         this.streamMode = options.streamMode || false;
         this.onStreamChunk = options.onStreamChunk || null;
+        this.onToolExecution = options.onToolExecution || null;
         
         // Set logger untuk AIManager
         if (this.logger) {
@@ -40,7 +41,8 @@ export class GeneralMCPHandler {
             this.sessionId, 
             this.maxIterations, 
             this.streamMode, 
-            this.onStreamChunk
+            this.onStreamChunk,
+            this.onToolExecution
         );
         
         // Initialize the conversation with system prompt
@@ -109,17 +111,58 @@ export class GeneralMCPHandler {
     setStreamMode(enabled, onChunk = null) {
         this.streamMode = enabled;
         this.onStreamChunk = onChunk;
-        // Update in request handler
-        this.requestHandler = new RequestHandler(
-            this.toolCallHandler, 
-            this.conversationHandler, 
-            this.loggingHandler, 
-            this.aiManager, 
-            this.sessionId, 
-            this.maxIterations, 
-            this.streamMode, 
-            this.onStreamChunk
-        );
+        
+        // Log untuk debugging
+        console.log(`Stream mode diatur ke ${enabled ? 'enabled' : 'disabled'}, handler: ${onChunk ? 'provided' : 'null'}`);
+        
+        // Hanya buat ulang RequestHandler jika belum ada
+        if (!this.requestHandler) {
+            this.requestHandler = new RequestHandler(
+                this.toolCallHandler, 
+                this.conversationHandler, 
+                this.loggingHandler, 
+                this.aiManager, 
+                this.sessionId, 
+                this.maxIterations, 
+                this.streamMode, 
+                this.onStreamChunk,
+                this.onToolExecution
+            );
+        } else {
+            // Perbarui properti di RequestHandler yang sudah ada
+            this.requestHandler.streamMode = this.streamMode;
+            this.requestHandler.onStreamChunk = this.onStreamChunk;
+        }
+    }
+    
+    // Set the tool execution handler
+    setToolExecutionHandler(onToolExecution) {
+        this.onToolExecution = onToolExecution;
+        
+        // Update in tool call handler first
+        this.toolCallHandler.setToolExecutionHandler(onToolExecution);
+        
+        // Log untuk debugging
+        console.log(`Tool execution handler diatur untuk ${onToolExecution ? 'fungsi callback' : 'null'}`);
+        
+        // Hanya buat ulang RequestHandler jika belum ada atau properti lain berubah
+        // Ini mencegah kehilangan referensi ke handler
+        if (!this.requestHandler) {
+            this.requestHandler = new RequestHandler(
+                this.toolCallHandler, 
+                this.conversationHandler, 
+                this.loggingHandler, 
+                this.aiManager, 
+                this.sessionId, 
+                this.maxIterations, 
+                this.streamMode, 
+                this.onStreamChunk,
+                this.onToolExecution
+            );
+        } else {
+            // Gunakan metode untuk mengatur handler daripada membuat objek baru
+            this.requestHandler.setToolExecutionHandler(onToolExecution);
+        }
     }
 
     // AI Management Methods

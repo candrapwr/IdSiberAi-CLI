@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 
 export class RequestHandler {
-    constructor(toolCallHandler, conversationHandler, loggingHandler, aiManager, sessionId, maxIterations, streamMode, onStreamChunk) {
+    constructor(toolCallHandler, conversationHandler, loggingHandler, aiManager, sessionId, maxIterations, streamMode, onStreamChunk, onToolExecution) {
         this.toolCallHandler = toolCallHandler;
         this.conversationHandler = conversationHandler;
         this.loggingHandler = loggingHandler;
@@ -10,6 +10,18 @@ export class RequestHandler {
         this.maxIterations = maxIterations;
         this.streamMode = streamMode;
         this.onStreamChunk = onStreamChunk;
+        
+        // If onToolExecution is provided, set it on the toolCallHandler
+        if (onToolExecution) {
+            this.toolCallHandler.setToolExecutionHandler(onToolExecution);
+        }
+    }
+    
+    // Metode tambahan untuk mengatur tool execution handler
+    setToolExecutionHandler(onToolExecution) {
+        // Pastikan handler diteruskan ke ToolCallHandler
+        this.toolCallHandler.setToolExecutionHandler(onToolExecution);
+        console.log('Tool execution handler diperbarui di RequestHandler');
     }
 
     async handleUserRequest(userInput) {
