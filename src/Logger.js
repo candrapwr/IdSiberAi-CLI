@@ -115,28 +115,9 @@ export class Logger {
                 message: error.message,
                 stack: error.stack,
                 name: error.name,
-                code: error.code,
-                status: error.status,
-                config: error.config ? {
-                    method: error.config.method,
-                    url: error.config.url,
-                    data: error.config.data
-                } : undefined
+                body: error.body ?? null,
             },
-            response: error.response ? {
-                status: error.response.status,
-                data: error.response.data,
-                headers: error.response.headers
-            } : undefined,
-            request: error.request ? {
-                method: error.request.method,
-                path: error.request.path,
-                headers: error.request.headers
-            } : undefined,
-            context: {
-                ...context,
-                timestamp: new Date().toISOString()
-            }
+            context
         });
     }
 

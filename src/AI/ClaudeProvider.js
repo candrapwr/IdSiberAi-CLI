@@ -23,7 +23,7 @@ export class ClaudeProvider extends BaseAIProvider {
         
         const request = {
             model: options.model || this.getDefaultModel(),
-            max_tokens: options.max_tokens || 8000,
+            max_tokens: 4000,
             temperature: 0.3,
             messages: claudeMessages,
             stream: options.stream || false
@@ -40,13 +40,21 @@ export class ClaudeProvider extends BaseAIProvider {
                 return await this.normalChat(request, startTime, options.metadata);
             }
         } catch (error) {
+
+            let errorFinal = error;
+
+            if (error.response && error.response.data) {
+                const body = await readStreamErrorBody(error.response.data);
+                errorFinal.body = body;
+            }
+
             const response = this.createErrorResponse(error, options.stream);
             
             await this.logAPIRequest(request, response, {
                 ...options.metadata,
                 duration: Date.now() - startTime
             });
-            await this.logError(error, { context: 'api_call', request });
+            await this.logError(errorFinal, { context: 'api_call', request });
             
             return response;
         }
@@ -152,7 +160,6 @@ export class ClaudeProvider extends BaseAIProvider {
                             // Abaikan event ping dan lainnya yang tidak relevan
                         } catch (error) {
                             // Skip malformed JSON
-                            this.logError(error, { context: 'stream_parse', line });
                         }
                     }
                 }
@@ -200,4 +207,19 @@ export class ClaudeProvider extends BaseAIProvider {
             'claude-3-5-haiku-20241022',
         ];
     }
+}
+
+async function readStreamErrorBody(stream) {
+    return new Promise((resolve, reject) => {
+        let raw = '';
+        stream.on('data', chunk => raw += chunk.toString('utf8'));
+        stream.on('end', () => {
+            try {
+                resolve(JSON.parse(raw));
+            } catch {
+                resolve(raw);
+            }
+        });
+        stream.on('error', reject);
+    });
 }
