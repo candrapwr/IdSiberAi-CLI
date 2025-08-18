@@ -1,7 +1,7 @@
 {
-  "name": "mcp-general-assistant",
+  "name": "idsiber-ai-cli-assistant",
   "version": "2.0.0",
-  "description": "General Purpose Interactive CLI MCP Assistant with Multi-AI Support (DeepSeek, OpenAI, Claude, Grok) and File System Tools",
+  "description": "IdsiberAI-CLI is Interactive CLI MCP Assistant with Multi-AI Support (DeepSeek, OpenAI, Claude, Grok) and File System Tools",
   "main": "index.js",
   "type": "module",
   "scripts": {
