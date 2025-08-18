@@ -99,13 +99,6 @@ flowchart TD
     
     D -->|"No"| M
     M --> N["👤 User Output"]
-    
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style C fill:#fff3e0
-    style E fill:#e8f5e8
-    style M fill:#e8f5e8
-    style N fill:#e1f5fe
 ```
 
 ### 🔄 Key Flow Details:
