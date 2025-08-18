@@ -12,7 +12,7 @@ export class ClaudeProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'claude-3-7-sonnet-latest';
+        return 'claude-3-5-haiku-20241022';
     }
 
     async chat(messages, options = {}) {
