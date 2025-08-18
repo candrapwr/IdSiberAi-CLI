@@ -92,7 +92,8 @@ class GeneralMCPCLI {
             { name: 'OpenAI', key: 'openai', envVar: 'OPENAI_API_KEY' },
             { name: 'Claude', key: 'claude', envVar: 'CLAUDE_API_KEY' },
             { name: 'Grok', key: 'grok', envVar: 'GROK_API_KEY' },
-            { name: 'ZhiPuAI', key: 'zhipuai', envVar: 'ZHIPUAI_API_KEY' }
+            { name: 'ZhiPuAI', key: 'zhipuai', envVar: 'ZHIPUAI_API_KEY' },
+            { name: 'QwenAI', key: 'qwen', envVar: 'QWEN_API_KEY' }
         ];
 
         const apiKeys = {};

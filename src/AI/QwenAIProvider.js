@@ -1,18 +1,18 @@
 import axios from 'axios';
 import { BaseAIProvider } from './BaseAIProvider.js';
 
-export class ZhiPuAIProvider extends BaseAIProvider {
+export class QwenAIProvider extends BaseAIProvider {
     constructor(apiKey, enableLogging = true) {
         super(apiKey, enableLogging);
-        this.baseURL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+        this.baseURL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions';
     }
 
     getProviderName() {
-        return 'ZhiPuAI';
+        return 'QwenAI';
     }
 
     getDefaultModel() {
-        return 'glm-4.5';
+        return 'qwen-turbo';
     }
 
     async chat(messages, options = {}) {
@@ -20,10 +20,14 @@ export class ZhiPuAIProvider extends BaseAIProvider {
         const request = {
             model: options.model || this.getDefaultModel(),
             messages: this.normalizeMessages(messages),
-            temperature: 0.3,
-            max_tokens: options.max_tokens || 8000,
+            temperature: options.temperature || 0.3,
+            max_tokens: options.max_tokens || 10000,
             stream: options.stream || false
         };
+
+        if(options.stream){
+            request.stream_options = {include_usage:true};
+        }
 
         try {
             if (options.stream) {
@@ -51,7 +55,7 @@ export class ZhiPuAIProvider extends BaseAIProvider {
                 'Content-Type': 'application/json'
             }
         });
-
+        
         const result = this.normalizeResponse({
             message: response.data.choices[0].message.content,
             usage: response.data.usage
@@ -77,41 +81,41 @@ export class ZhiPuAIProvider extends BaseAIProvider {
         return new Promise((resolve, reject) => {
             let fullMessage = '';
             let usage = null;
+            let buffer = '';
             const chunks = [];
 
             response.data.on('data', (chunk) => {
-                const lines = chunk.toString().split('\n');
+                const chunkStr = chunk.toString();
+                buffer += chunkStr;
+                
+                // Process complete lines
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
                 
                 for (const line of lines) {
+                    if (line.trim() === '') continue;
+                    
+                    // Handle SSE format
                     if (line.startsWith('data: ')) {
-                        const data = line.slice(6);
+                        const data = line.slice(6).trim();
                         
                         if (data === '[DONE]') {
-                            const result = this.normalizeResponse({
-                                message: fullMessage,
-                                usage: usage
-                            }, true);
-                            
-                            result.chunks = chunks.length;
-
-                            resolve(result);
-                            return;
+                            continue; // We'll handle completion in the 'end' event
                         }
 
                         try {
                             const parsed = JSON.parse(data);
-                            const delta = parsed.choices?.[0]?.delta;
+                            const delta = parsed.choices?.[0]?.delta?.content;
                             
-                            if (delta?.content) {
-                                fullMessage += delta.content;
+                            if (delta) {
+                                fullMessage += delta;
                                 chunks.push({
-                                    content: delta.content,
+                                    content: delta,
                                     timestamp: Date.now()
                                 });
                                 
-                                // Emit chunk for real-time display
                                 if (metadata.onChunk) {
-                                    metadata.onChunk(delta.content);
+                                    metadata.onChunk(delta);
                                 }
                             }
 
@@ -120,6 +124,7 @@ export class ZhiPuAIProvider extends BaseAIProvider {
                             }
                         } catch (error) {
                             // Skip malformed JSON chunks
+                            // console.error('Failed to parse chunk:', error.message);
                         }
                     }
                 }
@@ -138,6 +143,32 @@ export class ZhiPuAIProvider extends BaseAIProvider {
             });
 
             response.data.on('end', () => {
+                // Process any remaining data in the buffer
+                if (buffer.trim() !== '') {
+                    const lines = buffer.split('\n');
+                    for (const line of lines) {
+                        if (line.trim() === '' || !line.startsWith('data: ')) continue;
+                        
+                        const data = line.slice(6).trim();
+                        if (data === '[DONE]') continue;
+                        
+                        try {
+                            const parsed = JSON.parse(data);
+                            const delta = parsed.choices?.[0]?.delta?.content;
+                            
+                            if (delta) {
+                                fullMessage += delta;
+                            }
+                            
+                            if (parsed.usage) {
+                                usage = parsed.usage;
+                            }
+                        } catch (error) {
+                            // Skip malformed JSON
+                        }
+                    }
+                }
+                
                 if (fullMessage) {
                     const result = this.normalizeResponse({
                         message: fullMessage,
@@ -161,11 +192,9 @@ export class ZhiPuAIProvider extends BaseAIProvider {
 
     getAvailableModels() {
         return [
-            'glm-4.5',
-            'codegeex-4',
-            'glm-4',
-            'glm-4-air',
-            'glm-4-plus',
+            'qwen-turbo',
+            'qwen-plus',
+            'qwen-max'
         ];
     }
 }

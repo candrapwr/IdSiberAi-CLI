@@ -3,6 +3,7 @@ import { OpenAIProvider } from './OpenAIProvider.js';
 import { ClaudeProvider } from './ClaudeProvider.js';
 import { GrokProvider } from './GrokProvider.js';
 import { ZhiPuAIProvider } from './ZhiPuAIProvider.js';
+import { QwenAIProvider } from './QwenAIProvider.js';
 import dotenv from 'dotenv';
 
 export class AIManager {
@@ -46,6 +47,12 @@ export class AIManager {
         if (apiKeys.zhipuai) {
             const zhipuai = new ZhiPuAIProvider(apiKeys.zhipuai, this.enableLogging);
             this.providers.set('ZhiPuAI', zhipuai);
+        }
+
+        // QwenAI
+        if (apiKeys.qwen) {
+            const qwen = new QwenAIProvider(apiKeys.qwen, this.enableLogging);
+            this.providers.set('QwenAI', qwen);
         }
 
         // Set provider pertama yang tersedia sebagai default
@@ -190,6 +197,9 @@ export class AIManager {
                 break;
             case 'zhipuai':
                 provider = new ZhiPuAIProvider(apiKey, this.enableLogging);
+                break;
+            case 'qwen':
+                provider = new QwenAIProvider(apiKey, this.enableLogging);
                 break;
             default:
                 throw new Error(`Provider type ${providerType} tidak didukung`);

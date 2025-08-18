@@ -2,7 +2,7 @@
 
 ## Overview
 
-IdSiberAi-CLI supports **5 major AI providers** with automatic fallback and seamless switching. Each provider has unique strengths for different tasks.
+IdSiberAi-CLI supports **6 major AI providers** with automatic fallback and seamless switching. Each provider has unique strengths for different tasks.
 
 ## 🎯 Provider Comparison
 
@@ -13,6 +13,7 @@ IdSiberAi-CLI supports **5 major AI providers** with automatic fallback and seam
 | **Claude** | Analysis, Writing | ⚡⚡ | 200K | 💰💰💰 |
 | **Grok** | Real-time, Creative | ⚡⚡⚡ | 128K | 💰💰 |
 | **ZhiPuAI** | Multilingual, Specialized | ⚡⚡ | 128K | 💰 |
+| **QwenAI** | Multilingual, Coding, General | ⚡⚡⚡ | 128K | 💰 |
 
 ## 🔧 Configuration
 
@@ -29,6 +30,7 @@ OPENAI_API_KEY=sk-proj-your-key-here
 CLAUDE_API_KEY=sk-ant-your-key-here
 GROK_API_KEY=xai-your-key-here
 ZHIPUAI_API_KEY=your-key-here
+QWEN_API_KEY=your-key-here
 ```
 
 ## 🚀 Provider Details
@@ -113,6 +115,22 @@ ZHIPUAI_API_KEY=your-key-here
 - ✅ Good for specialized tasks
 - ❌ Less familiar with Western context
 
+### 6. QwenAI
+**Best for:** Multilingual tasks, coding, general purpose
+
+#### Setup
+1. Visit [Qwen Dashboard](https://dashscope.aliyun.com/)
+2. Create account
+3. Generate API key
+4. Add to `.env`: `QWEN_API_KEY=sk-...`
+
+#### Features
+- ✅ Fast and efficient
+- ✅ Strong multilingual support
+- ✅ Good for coding and general tasks
+- ✅ Competitive pricing
+- ❌ May require specific model selection
+
 ## 🔄 Provider Management
 
 ### Switching Providers
@@ -160,8 +178,9 @@ You: "analyze this code"
 
 ### Coding Tasks
 1. **DeepSeek** - Primary choice
-2. **OpenAI** - Fallback
-3. **Claude** - Complex analysis
+2. **QwenAI** - Fast coding tasks
+3. **OpenAI** - Fallback
+4. **Claude** - Complex analysis
 
 ### File Operations
 1. **DeepSeek** - Fast and accurate
@@ -185,8 +204,9 @@ You: "analyze this code"
 
 ### Multilingual
 1. **ZhiPuAI** - Chinese/Asian languages
-2. **OpenAI** - Global languages
-3. **Claude** - European languages
+2. **QwenAI** - Multilingual support
+3. **OpenAI** - Global languages
+4. **Claude** - European languages
 
 ## 📊 Performance & Monitoring
 
@@ -224,6 +244,7 @@ AI Provider Usage Stats:
 | Claude | Limited | Pay-per-use |
 | Grok | Beta access | TBD |
 | ZhiPuAI | Limited | Pay-per-use |
+| QwenAI | Limited | Pay-per-use |
 
 ## 🐛 Troubleshooting
 
