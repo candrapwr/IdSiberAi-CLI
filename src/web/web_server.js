@@ -25,7 +25,7 @@ export class WebServer {
         // Setup socket.io
         this.setupSocketIO();
         
-        console.log(chalk.blue('🌐 Web server initialized'));
+        console.log(chalk.blue('🌐 IdSiberAi Terminal web server initialized'));
     }
     
     setupExpress() {
@@ -228,7 +228,7 @@ export class WebServer {
     start() {
         return new Promise((resolve) => {
             this.server.listen(this.port, () => {
-                console.log(chalk.green(`🚀 Web server running at http://localhost:${this.port}`));
+                console.log(chalk.green(`🚀 IdSiberAi Terminal web interface running at http://localhost:${this.port}`));
                 resolve();
             });
         });

@@ -3,6 +3,7 @@ const socket = io();
 let currentProvider = null;
 let sessionInfo = null;
 let currentlyTyping = false;
+let isDarkMode = true; // Default to dark mode
 
 // DOM elements
 const messagesContainer = document.getElementById('messagesContainer');
@@ -16,14 +17,19 @@ const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const statsBtn = document.getElementById('statsBtn');
 const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
 const testProvidersBtn = document.getElementById('testProvidersBtn');
+const themeToggleBtn = document.getElementById('themeToggleBtn');
 const statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
 const providerTestModal = new bootstrap.Modal(document.getElementById('providerTestModal'));
 const quickPromptBtns = document.querySelectorAll('.quick-prompt-btn');
+const sidebar = document.querySelector('.sidebar');
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     // Setup event listeners
     setupEventListeners();
+    
+    // Load theme preference
+    loadThemePreference();
     
     // Load initial conversation history
     fetchConversationHistory();
@@ -49,16 +55,36 @@ function setupEventListeners() {
     // Test providers button
     testProvidersBtn.addEventListener('click', testProviders);
     
+    // Theme toggle button
+    themeToggleBtn.addEventListener('click', toggleTheme);
+    
     // Quick prompt buttons
     quickPromptBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             userInput.value = btn.textContent.trim();
             userInput.focus();
+            autoResizeTextarea.call(userInput);
         });
     });
     
     // Socket.io event listeners
     setupSocketListeners();
+    
+    // Focus input on page load
+    setTimeout(() => {
+        userInput.focus();
+    }, 500);
+    
+    // Close sidebar on mobile when clicking outside
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 767 && 
+            sidebar.classList.contains('show') && 
+            !sidebar.contains(e.target) && 
+            e.target !== toggleSidebarBtn) {
+            sidebar.classList.remove('show');
+            document.querySelector('.main-content').style.display = 'flex';
+        }
+    });
 }
 
 // Socket.io event listeners
@@ -90,10 +116,12 @@ function setupSocketListeners() {
     // Connection status
     socket.on('connect', () => {
         console.log('Socket connected successfully');
+        addSystemMessage('Connected to server');
     });
     
     socket.on('disconnect', () => {
         console.log('Socket disconnected');
+        addSystemMessage('Disconnected from server. Reconnecting...');
         // Try to reconnect
         setTimeout(() => {
             socket.connect();
@@ -102,7 +130,36 @@ function setupSocketListeners() {
     
     socket.on('connect_error', (err) => {
         console.error('Connection error:', err);
+        addSystemMessage('Connection error. Please check your network.');
     });
+}
+
+// Theme handling
+function loadThemePreference() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        isDarkMode = savedTheme === 'dark';
+        updateThemeUI();
+    }
+}
+
+function toggleTheme() {
+    isDarkMode = !isDarkMode;
+    updateThemeUI();
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+}
+
+function updateThemeUI() {
+    document.body.classList.toggle('dark-mode', isDarkMode);
+    document.documentElement.classList.toggle('dark-mode', isDarkMode);
+    
+    // Update icon
+    themeToggleBtn.innerHTML = isDarkMode ? 
+        '<i class="bi bi-sun"></i>' : 
+        '<i class="bi bi-moon-stars"></i>';
+    
+    // Update button text
+    themeToggleBtn.title = isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode';
 }
 
 // Handle form submission
@@ -138,8 +195,8 @@ function handleSessionInfo(data) {
     currentProvider = data.currentAIProvider;
     
     // Update session info display
-    currentProviderEl.innerHTML = `<strong>Provider:</strong> ${data.currentAIProvider}`;
-    sessionIdEl.innerHTML = `<strong>Session:</strong> ${data.sessionId.substring(0, 8)}...`;
+    currentProviderEl.innerHTML = `<strong>Provider:</strong> <span class="text-primary">${data.currentAIProvider}</span>`;
+    sessionIdEl.innerHTML = `<strong>Session:</strong> <span class="text-primary">${data.sessionId.substring(0, 8)}...</span>`;
     
     // Populate providers list
     populateProvidersList(data.availableAIProviders, data.aiProvidersInfo, data.currentAIProvider);
@@ -161,7 +218,7 @@ function populateProvidersList(providers, providersInfo, currentProvider) {
         const statusIcon = providerInfo.isActive ? 'bi-check-circle-fill' : 'bi-dash-circle';
         
         const item = document.createElement('div');
-        item.className = `list-group-item bg-transparent text-white provider-item ${isActive ? 'active' : ''}`;
+        item.className = `provider-item ${isActive ? 'active' : ''}`;
         item.dataset.provider = provider;
         item.innerHTML = `
             <div class="d-flex justify-content-between align-items-center">
@@ -239,7 +296,7 @@ function organizeToolsByCategory(tools) {
             const categoryDiv = document.createElement('div');
             categoryDiv.className = 'tool-category';
             categoryDiv.innerHTML = `
-                <div class="text-white-50 small mb-1">${category}</div>
+                <div class="tool-category-title">${category}</div>
                 <ul class="tool-list">
                     ${availableTools.map(tool => `<li>${tool}</li>`).join('')}
                 </ul>
@@ -264,15 +321,18 @@ function addMessage(role, content, metadata = {}) {
     messageDiv.innerHTML = `
         <div class="message-content">${formattedContent}</div>
         <div class="message-meta">
-            ${role === 'assistant' && metadata.aiProvider ? `Provider: ${metadata.aiProvider}` : ''}
-            ${role === 'assistant' && metadata.processingTime ? `Time: ${metadata.processingTime}ms` : ''}
+            ${role === 'assistant' && metadata.aiProvider ? `<span><i class="bi bi-cpu"></i> ${metadata.aiProvider}</span>` : ''}
+            ${role === 'assistant' && metadata.processingTime ? `<span><i class="bi bi-clock"></i> ${metadata.processingTime}ms</span>` : ''}
             ${role === 'assistant' && metadata.toolsUsed && metadata.toolsUsed.length > 0 ? 
                 `<div class="tools-used mt-1">
-                    Tools: ${metadata.toolsUsed.map(tool => 
+                    ${metadata.toolsUsed.map(tool => 
                         `<span class="tool-badge">${tool.name}</span>`).join('')}
                 </div>` : ''}
         </div>
     `;
+    
+    // Add animation classes
+    messageDiv.classList.add('animate__animated', 'animate__fadeIn');
     
     messagesContainer.appendChild(messageDiv);
     
@@ -281,7 +341,9 @@ function addMessage(role, content, metadata = {}) {
     
     // Apply syntax highlighting
     if (role === 'assistant') {
-        highlightCodeBlocks();
+        setTimeout(() => {
+            highlightCodeBlocks();
+        }, 100);
     }
 }
 
@@ -316,7 +378,7 @@ function showTypingIndicator() {
     const typingDiv = document.createElement('div');
     typingDiv.id = 'typingIndicator';
     typingDiv.className = 'typing-indicator';
-    typingDiv.innerHTML = '<i class="bi bi-three-dots"></i> Assistant is typing...';
+    typingDiv.innerHTML = '<i class="bi bi-three-dots"></i> IdSiberAi is processing...';
     
     messagesContainer.appendChild(typingDiv);
     scrollToBottom();
@@ -358,7 +420,7 @@ function handleStreamChunk(data) {
         streamMessageDiv.innerHTML = `
             <div class="message-content"></div>
             <div class="message-meta">
-                ${currentProvider ? `Provider: ${currentProvider}` : ''}
+                ${currentProvider ? `<span><i class="bi bi-cpu"></i> ${currentProvider}</span>` : ''}
             </div>
         `;
         messagesContainer.appendChild(streamMessageDiv);
@@ -405,11 +467,11 @@ function handleAssistantResponse(data) {
         if (lastMessage && lastMessage.classList.contains('message-assistant')) {
             const metaDiv = lastMessage.querySelector('.message-meta');
             metaDiv.innerHTML = `
-                Provider: ${data.aiProvider}
-                ${data.processingTime ? `Time: ${data.processingTime}ms` : ''}
+                <span><i class="bi bi-cpu"></i> ${data.aiProvider}</span>
+                ${data.processingTime ? `<span><i class="bi bi-clock"></i> ${data.processingTime}ms</span>` : ''}
                 ${data.toolsUsed && data.toolsUsed.length > 0 ? 
                     `<div class="tools-used mt-1">
-                        Tools: ${data.toolsUsed.map(tool => 
+                        ${data.toolsUsed.map(tool => 
                             `<span class="tool-badge">${tool.name}</span>`).join('')}
                     </div>` : ''}
             `;
@@ -439,9 +501,12 @@ function switchProvider(provider) {
         item.classList.remove('active');
         if (item.dataset.provider === provider) {
             item.classList.add('active');
-            item.innerHTML += '<div class="text-center mt-2"><div class="spinner-border spinner-border-sm text-light" role="status"></div></div>';
+            item.innerHTML += '<div class="text-center mt-2"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>';
         }
     });
+    
+    // Add system message indicating switch
+    addSystemMessage(`Switching to ${provider} AI provider...`);
     
     // Send switch request
     socket.emit('switch-provider', { provider });
@@ -454,19 +519,13 @@ function handleProviderSwitched(data) {
         currentProvider = data.currentProvider;
         
         // Add system message
-        const systemMessageDiv = document.createElement('div');
-        systemMessageDiv.className = 'alert alert-info small text-center my-2';
-        systemMessageDiv.innerHTML = `Switched to <strong>${data.currentProvider}</strong> provider`;
-        messagesContainer.appendChild(systemMessageDiv);
+        addSystemMessage(`Switched to <strong>${data.currentProvider}</strong> provider`);
         
         // Scroll to bottom
         scrollToBottom();
     } else {
         // Show error
-        const errorMessageDiv = document.createElement('div');
-        errorMessageDiv.className = 'alert alert-danger small text-center my-2';
-        errorMessageDiv.innerHTML = `Failed to switch provider: ${data.error}`;
-        messagesContainer.appendChild(errorMessageDiv);
+        addSystemMessage(`Failed to switch provider: ${data.error}`, 'error');
     }
     
     // Request updated session info
@@ -542,6 +601,7 @@ function fetchConversationHistory() {
         })
         .catch(error => {
             console.error('Error fetching conversation history:', error);
+            addSystemMessage('Failed to load conversation history', 'error');
         });
 }
 
@@ -551,7 +611,7 @@ function displayConversationHistory(history) {
     messagesContainer.innerHTML = '';
     
     // If no history, show welcome message
-    if (history.length === 0) return;
+    if (!history || history.length === 0) return;
     
     // Add each message to the UI
     history.forEach(msg => {
@@ -562,10 +622,10 @@ function displayConversationHistory(history) {
 }
 
 // Add system message
-function addSystemMessage(message) {
+function addSystemMessage(message, type = 'info') {
     const systemMessageDiv = document.createElement('div');
-    systemMessageDiv.className = 'alert alert-secondary small text-center my-2';
-    systemMessageDiv.textContent = message;
+    systemMessageDiv.className = `system-message ${type === 'error' ? 'alert-danger' : ''}`;
+    systemMessageDiv.innerHTML = message;
     messagesContainer.appendChild(systemMessageDiv);
     scrollToBottom();
 }
@@ -812,3 +872,31 @@ function scrollToBottom() {
     const chatWindow = document.querySelector('.chat-window');
     chatWindow.scrollTop = chatWindow.scrollHeight;
 }
+
+// Helper functions for keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + Enter to submit form
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        if (document.activeElement === userInput) {
+            messageForm.dispatchEvent(new Event('submit'));
+        }
+    }
+    
+    // Escape to close modals
+    if (e.key === 'Escape') {
+        // Close any open modals
+        const openModals = document.querySelectorAll('.modal.show');
+        if (openModals.length > 0) {
+            openModals.forEach(modal => {
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            });
+        }
+        // Close sidebar on mobile
+        else if (window.innerWidth <= 767 && sidebar.classList.contains('show')) {
+            toggleSidebar();
+        }
+    }
+});
