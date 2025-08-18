@@ -36,6 +36,13 @@ export class QwenAIProvider extends BaseAIProvider {
                 return await this.normalChat(request, startTime, options.metadata);
             }
         } catch (error) {
+            let errorFinal = error;
+
+            if (error.response && error.response.data) {
+                const body = await readStreamErrorBody(error.response.data);
+                errorFinal.body = body;
+            }
+
             const response = this.createErrorResponse(error, options.stream);
             
             await this.logAPIRequest(request, response, {
@@ -197,4 +204,19 @@ export class QwenAIProvider extends BaseAIProvider {
             'qwen-max'
         ];
     }
+}
+
+async function readStreamErrorBody(stream) {
+    return new Promise((resolve, reject) => {
+        let raw = '';
+        stream.on('data', chunk => raw += chunk.toString('utf8'));
+        stream.on('end', () => {
+            try {
+                resolve(JSON.parse(raw));
+            } catch {
+                resolve(raw);
+            }
+        });
+        stream.on('error', reject);
+    });
 }
