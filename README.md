@@ -76,20 +76,47 @@ You: "What can you help me with?"
 ## 🏗️ Architecture
 
 ```mermaid
-graph TB
-    A[User Input] --> B[Multi-AI Manager]
-    B --> C[Tool Selection]
-    C --> D[File Operations]
-    C --> E[S3 Operations]
-    C --> F[System Operations]
-    C --> G[Analysis Tools]
-    D --> H[Results Processing]
-    E --> H
-    F --> H
-    G --> H
-    H --> I[AI Response]
-    I --> J[User Output]
+flowchart TD
+    A["👤 User Input"] --> B["🤖 Multi-AI Manager"]
+    B --> C["🧠 AI Processing & Tool Selection"]
+    C --> D{"🔧 Tool Execution Needed?"}
+    
+    D -->|"Yes"| E["⚙️ Tool Execution"]
+    E --> F["📁 File Operations"]
+    E --> G["☁️ S3 Operations"]
+    E --> H["💻 System Operations"]
+    E --> I["🔍 Analysis Tools"]
+    
+    F --> J["📊 Tool Results"]
+    G --> J
+    H --> J
+    I --> J
+    
+    J --> K["🔄 Results Back to AI"]
+    K --> L{"🤔 Need More Tools?"}
+    L -->|"Yes"| C
+    L -->|"No"| M["✅ Final AI Response"]
+    
+    D -->|"No"| M
+    M --> N["👤 User Output"]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#fff3e0
+    style E fill:#e8f5e8
+    style M fill:#e8f5e8
+    style N fill:#e1f5fe
 ```
+
+### 🔄 Key Flow Details:
+
+1. **User Input** → Natural language request
+2. **AI Processing** → Understands request & determines needed tools
+3. **Tool Execution** → Runs appropriate operations (file, S3, system, analysis)
+4. **Results Processing** → Tool results are sent back to AI (not directly to user)
+5. **AI Analysis** → AI processes tool results and determines next steps
+6. **Iteration** → May use more tools if needed based on results
+7. **Final Response** → AI provides comprehensive response to user
 
 ## 🎯 Use Cases
 
