@@ -56,7 +56,6 @@ export class ToolCallHandler {
                                 .replace(/\t/g, '\\t')      // Escape tabs
                                 .replace(/\r/g, '\\r');     // Escape carriage returns
                             
-                            console.log(chalk.gray(`🧹 Properly cleaned string value for key '${key}'`));
                             return `"${key}": "${cleanValue}"`;
                         });
 
@@ -79,7 +78,6 @@ export class ToolCallHandler {
                                 .replace(/\t/g, '\\t')      // Escape tabs
                                 .replace(/\r/g, '\\r');     // Escape carriage returns
                             
-                            console.log(chalk.gray(`🧹 Cleaned backtick-quoted value for key '${key}' in ${actionMatch[1]} parameters`));
                             return `"${key}": "${cleanValue}"`;
                         });
 
