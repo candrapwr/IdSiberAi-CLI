@@ -110,6 +110,11 @@ export class AIManager {
         }
         return info;
     }
+    
+    // Fallback status management
+    isFallbackEnabled() {
+        return process.env.ENABLE_AI_FALLBACK === 'true';
+    }
 
     // Chat menggunakan provider yang aktif
     async chat(messages, options = {}) {
