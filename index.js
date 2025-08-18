@@ -1,6 +1,7 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import { GeneralMCPHandler } from './src/handlers/GeneralMCPHandler.js';
+import { WebServer } from './src/web/web_server.js';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -16,129 +17,41 @@ class GeneralMCPCLI {
     }
 
     async initialize() {
-        console.log(chalk.blue.bold('🚀 General MCP Assistant CLI - Multi-AI Edition'));
-        console.log(chalk.gray('AI-Powered File System & Automation Assistant with Multiple AI Providers'));
+        console.log(chalk.blue.bold('🚀 IdSiberAi Assistant CLI - Multi-AI Edition'));
         console.log(chalk.gray('='.repeat(70)));
         
-        // Get configuration
-        const config = await this.getConfiguration();
+        // Use the shared initialize function
+        this.mcp = await initializeMCPHandler();
         
-        if (!config) {
-            console.log(chalk.red('❌ Configuration cancelled. Exiting...'));
+        if (!this.mcp) {
+            console.log(chalk.red('❌ Initialization failed. Exiting...'));
             return false;
         }
-
-        // Initialize MCP Handler
-        try {
-            this.mcp = new GeneralMCPHandler(
-                config.apiKeys,
-                config.workingDirectory,
-                config.maxIterations,
-                {
-                    enableLogging: config.enableLogging,
-                    streamMode: config.streamMode,
-                    debug: process.env.DEBUG === 'true' || process.env.NODE_ENV === 'development',
-                    onStreamChunk: this.handleStreamChunk.bind(this)
-                }
-            );
-            
-            this.streamMode = config.streamMode;
-            
-            console.log(chalk.green('✅ MCP Assistant initialized successfully!'));
-            console.log(chalk.gray(`Working Directory: ${config.workingDirectory}`));
-            console.log(chalk.gray(`Available Tools: ${this.mcp.getToolsList().length} tools`));
-            console.log(chalk.gray(`Logging: ${config.enableLogging ? '✅ Enabled' : '❌ Disabled'}`));
-            console.log(chalk.gray(`Stream Mode: ${config.streamMode ? '✅ Enabled' : '❌ Disabled'}`));
-            console.log(chalk.gray(`AI Fallback: ${config.enableAIFallback ? '✅ Enabled' : '❌ Disabled'}`));
-            
-            const sessionInfo = this.mcp.getSessionInfo();
-            console.log(chalk.gray(`Session ID: ${sessionInfo.sessionId}`));
-            console.log(chalk.gray(`Current AI Provider: ${sessionInfo.currentAIProvider || 'None'}`));
-            console.log(chalk.gray(`Available AI Providers: ${sessionInfo.availableAIProviders.join(', ') || 'None'}`));
-            console.log(chalk.gray('='.repeat(70)));
-            
-            return true;
-        } catch (error) {
-            console.log(chalk.red(`❌ Error initializing MCP: ${error.message}`));
-            return false;
-        }
-    }
-
-    async getConfiguration() {
-        console.log(chalk.yellow('⚙️  Configuration Setup - Multi-AI Edition'));
-        console.log(chalk.gray('Configure your AI providers and system settings:'));
         
-        const aiConfig = await this.configureAIProviders();
-        if (!aiConfig || Object.keys(aiConfig).length === 0) {
-            console.log(chalk.red('❌ At least one AI provider must be configured'));
-            return null;
-        }
-
-        try {
-            return {
-                apiKeys: aiConfig,
-                workingDirectory: path.resolve(process.env.WORKING_DIRECTORY || './workspace'),
-                maxIterations: parseInt(process.env.MAX_ITERATIONS) || 15,
-                enableLogging: process.env.ENABLE_LOGGING === 'true',
-                streamMode: process.env.ENABLE_STREAMING === 'true',
-                enableAIFallback: process.env.ENABLE_AI_FALLBACK === 'true'
-            };
-        } catch (error) {
-            return null;
-        }
-    }
-
-    async configureAIProviders() {
-        const providers = [
-            { name: 'DeepSeek', key: 'deepseek', envVar: 'DEEPSEEK_API_KEY' },
-            { name: 'OpenAI', key: 'openai', envVar: 'OPENAI_API_KEY' },
-            { name: 'Claude', key: 'claude', envVar: 'CLAUDE_API_KEY' },
-            { name: 'Grok', key: 'grok', envVar: 'GROK_API_KEY' },
-            { name: 'ZhiPuAI', key: 'zhipuai', envVar: 'ZHIPUAI_API_KEY' },
-            { name: 'QwenAI', key: 'qwen', envVar: 'QWEN_API_KEY' }
-        ];
-
-        const apiKeys = {};
+        // Configure stream mode
+        this.streamMode = process.env.ENABLE_STREAMING === 'true';
+        this.mcp.setStreamMode(this.streamMode, this.handleStreamChunk.bind(this));
         
-        console.log(chalk.cyan('\n🤖 AI Provider Configuration'));
-        console.log(chalk.gray('Configure your AI providers (leave empty to skip):'));
-
-        for (const provider of providers) {
-            const defaultKey = process.env[provider.envVar] || '';
-            const apiKey = defaultKey;
-
-            if (apiKey && apiKey.trim()) {
-                apiKeys[provider.key] = apiKey.trim();
-                console.log(chalk.green(`✅ ${provider.name} configured`));
-            } else {
-                console.log(chalk.gray(`⏭️  ${provider.name} skipped`));
-            }
-        }
-
-        if (Object.keys(apiKeys).length === 0) {
-            console.log(chalk.red('\n❌ No AI providers configured!'));
-            const { retry } = await inquirer.prompt([
-                {
-                    type: 'confirm',
-                    name: 'retry',
-                    message: 'Would you like to try again?',
-                    default: true
-                }
-            ]);
-
-            if (retry) {
-                return await this.configureAIProviders();
-            }
-            return null;
-        }
-
-        console.log(chalk.green(`\n✅ ${Object.keys(apiKeys).length} AI provider(s) configured successfully!`));
-        return apiKeys;
+        console.log(chalk.gray(`Logging: ${process.env.ENABLE_LOGGING === 'true' ? '✅ Enabled' : '❌ Disabled'}`));
+        console.log(chalk.gray(`Stream Mode: ${this.streamMode ? '✅ Enabled' : '❌ Disabled'}`));
+        console.log(chalk.gray(`AI Fallback: ${process.env.ENABLE_AI_FALLBACK === 'true' ? '✅ Enabled' : '❌ Disabled'}`));
+        
+        const sessionInfo = this.mcp.getSessionInfo();
+        console.log(chalk.gray(`Session ID: ${sessionInfo.sessionId}`));
+        console.log(chalk.gray('='.repeat(70)));
+        
+        return true;
     }
+
+
 
     handleStreamChunk(chunk) {
         if (this.streamMode) {
-            process.stdout.write(chalk.green(chunk));
+            if (this.onStreamChunk) {
+                this.onStreamChunk(chunk);
+            } else {
+                process.stdout.write(chalk.green(chunk));
+            }
         }
     }
 
@@ -714,17 +627,159 @@ class GeneralMCPCLI {
 
 // Main execution
 async function main() {
-    const cli = new GeneralMCPCLI();
+    console.log(chalk.blue.bold('🚀 IdSiberAi Assistant - Multi-AI Edition'));
+    console.log(chalk.gray('AI-Powered File System & Automation Assistant with Multiple AI Providers'));
+    console.log(chalk.gray('='.repeat(70)));
     
-    // Initialize the CLI
-    const initialized = await cli.initialize();
+    // Ask user for mode selection
+    const { mode } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'mode',
+            message: 'Select application mode:',
+            choices: [
+                { name: 'CLI Mode - Command Line Interface', value: 'cli' },
+                { name: 'Web Mode - Web Browser Interface', value: 'web' }
+            ],
+            default: 'cli'
+        }
+    ]);
     
-    if (initialized) {
-        // Start chat mode
-        await cli.startChat();
+    if (mode === 'cli') {
+        // Initialize CLI mode
+        const cli = new GeneralMCPCLI();
+        const initialized = await cli.initialize();
+        
+        if (initialized) {
+            // Start chat mode
+            await cli.startChat();
+        }
+    } else {
+        // Initialize Web mode
+        console.log(chalk.yellow('Initializing Web mode...'));
+        
+        try {
+            // Get web server port from environment or use default
+            const port = parseInt(process.env.WEB_PORT) || 3000;
+            
+            // Initialize MCP handler first
+            const mcpHandler = await initializeMCPHandler();
+            
+            if (mcpHandler) {
+                // Initialize and start web server
+                const webServer = new WebServer(mcpHandler, port);
+                await webServer.start();
+                
+                console.log(chalk.green.bold(`✅ Web interface is now available at http://localhost:${port}`));
+                console.log(chalk.gray('Press Ctrl+C to stop the server'));
+                
+                // Keep the process running
+                process.stdin.resume();
+            } else {
+                console.log(chalk.red('❌ Failed to initialize MCP Handler'));
+                process.exit(1);
+            }
+        } catch (error) {
+            console.log(chalk.red(`❌ Error initializing Web mode: ${error.message}`));
+            process.exit(1);
+        }
     }
+}
+
+// Initialize MCP Handler (shared function for both modes)
+async function initializeMCPHandler() {
+    try {
+        // Configure AI providers
+        const aiConfig = await configureAIProviders();
+        if (!aiConfig || Object.keys(aiConfig).length === 0) {
+            console.log(chalk.red('❌ At least one AI provider must be configured'));
+            return null;
+        }
+        
+        // Create configuration
+        const config = {
+            apiKeys: aiConfig,
+            workingDirectory: path.resolve(process.env.WORKING_DIRECTORY || './workspace'),
+            maxIterations: parseInt(process.env.MAX_ITERATIONS) || 15,
+            enableLogging: process.env.ENABLE_LOGGING === 'true',
+            streamMode: process.env.ENABLE_STREAMING === 'true',
+            enableAIFallback: process.env.ENABLE_AI_FALLBACK === 'true'
+        };
+        
+        // Initialize MCP Handler
+        const mcpHandler = new GeneralMCPHandler(
+            config.apiKeys,
+            config.workingDirectory,
+            config.maxIterations,
+            {
+                enableLogging: config.enableLogging,
+                streamMode: config.streamMode,
+                debug: process.env.DEBUG === 'true' || process.env.NODE_ENV === 'development'
+            }
+        );
+        
+        console.log(chalk.green('✅ MCP Assistant initialized successfully!'));
+        console.log(chalk.gray(`Working Directory: ${config.workingDirectory}`));
+        console.log(chalk.gray(`Available Tools: ${mcpHandler.getToolsList().length} tools`));
+        
+        const sessionInfo = mcpHandler.getSessionInfo();
+        console.log(chalk.gray(`Current AI Provider: ${sessionInfo.currentAIProvider || 'None'}`));
+        console.log(chalk.gray(`Available AI Providers: ${sessionInfo.availableAIProviders.join(', ') || 'None'}`));
+        
+        return mcpHandler;
+    } catch (error) {
+        console.log(chalk.red(`❌ Error initializing MCP: ${error.message}`));
+        return null;
+    }
+}
+
+// Configure AI providers (shared function)
+async function configureAIProviders() {
+    const providers = [
+        { name: 'DeepSeek', key: 'deepseek', envVar: 'DEEPSEEK_API_KEY' },
+        { name: 'OpenAI', key: 'openai', envVar: 'OPENAI_API_KEY' },
+        { name: 'Claude', key: 'claude', envVar: 'CLAUDE_API_KEY' },
+        { name: 'Grok', key: 'grok', envVar: 'GROK_API_KEY' },
+        { name: 'ZhiPuAI', key: 'zhipuai', envVar: 'ZHIPUAI_API_KEY' },
+        { name: 'QwenAI', key: 'qwen', envVar: 'QWEN_API_KEY' }
+    ];
+
+    const apiKeys = {};
     
-    process.exit(0);
+    console.log(chalk.cyan('\n🤖 AI Provider Configuration'));
+    console.log(chalk.gray('Configure your AI providers (using environment variables):'));
+
+    for (const provider of providers) {
+        const defaultKey = process.env[provider.envVar] || '';
+        const apiKey = defaultKey;
+
+        if (apiKey && apiKey.trim()) {
+            apiKeys[provider.key] = apiKey.trim();
+            console.log(chalk.green(`✅ ${provider.name} configured`));
+        } else {
+            console.log(chalk.gray(`⏭️  ${provider.name} skipped`));
+        }
+    }
+
+    if (Object.keys(apiKeys).length === 0) {
+        console.log(chalk.red('\n❌ No AI providers configured!'));
+        const { retry } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'retry',
+                message: 'Would you like to try again?',
+                default: true
+            }
+        ]);
+
+        if (retry) {
+            return await configureAIProviders();
+        }
+        return null;
+    }
+
+    console.log(chalk.green(`\n✅ ${Object.keys(apiKeys).length} AI provider(s) configured successfully!`));
+    return apiKeys;
 }
 
 // Handle unhandled rejections
