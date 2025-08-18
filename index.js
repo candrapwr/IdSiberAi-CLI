@@ -582,6 +582,9 @@ class GeneralMCPCLI {
         console.log('  "create a README file for my project"');
         console.log('  "organize my files by file type"');
         console.log('  "run npm install command"');
+        console.log('  "upload file.txt to S3 bucket"');
+        console.log('  "download myfile.json from S3"');
+        console.log('  "search S3 for files with prefix data/"');
         console.log('  "backup all my .js files to a backup folder"');
         console.log('  "switch to OpenAI provider"');
         console.log('  "test all AI providers"');
@@ -594,6 +597,7 @@ class GeneralMCPCLI {
         console.log('  ⚙️  System automation and commands');
         console.log('  📊  Data processing and manipulation');
         console.log('  🔧  Development workflow assistance');
+        console.log('  ☁️  Cloud storage management (S3)');
         console.log('  📜  Logging and usage monitoring');
         console.log('  🤖  Multi-AI provider management');
         
@@ -626,6 +630,9 @@ class GeneralMCPCLI {
             ],
             'System Operations': [
                 'execute_command', 'get_working_directory_info'
+            ],
+            'S3 Cloud Storage Operations': [
+                's3_upload', 's3_download', 's3_delete', 's3_search', 's3_get_client_info'
             ],
             'AI Management Operations': [
                 'switch_ai_provider', 'list_ai_providers', 'get_ai_provider_info', 'test_ai_providers'

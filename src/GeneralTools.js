@@ -2,6 +2,7 @@ import { FileTools } from './tools/FileTools.js';
 import { DirectoryTools } from './tools/DirectoryTools.js';
 import { AnalysisTools } from './tools/AnalysisTools.js';
 import { SystemTools } from './tools/SystemTools.js';
+import { S3Tools } from './tools/S3Tools.js';
 
 /**
  * GeneralTools - Main class that combines all tools
@@ -17,6 +18,7 @@ export class GeneralTools {
         this.directoryTools = new DirectoryTools(workingDirectory);
         this.analysisTools = new AnalysisTools(workingDirectory);
         this.systemTools = new SystemTools(workingDirectory);
+        this.s3Tools = new S3Tools(workingDirectory);
     }
 
     // File System Operations
@@ -85,5 +87,26 @@ export class GeneralTools {
 
     async getWorkingDirectoryInfo() {
         return await this.systemTools.getWorkingDirectoryInfo();
+    }
+
+    // S3 Operations
+    async s3Upload(key, filePath) {
+        return await this.s3Tools.upload(key, filePath);
+    }
+
+    async s3Download(key, downloadPath) {
+        return await this.s3Tools.download(key, downloadPath);
+    }
+
+    async s3Delete(key) {
+        return await this.s3Tools.delete(key);
+    }
+
+    async s3Search(prefix = '', maxKeys = 1000) {
+        return await this.s3Tools.search(prefix, maxKeys);
+    }
+
+    async s3GetClientInfo() {
+        return await this.s3Tools.getClientInfo();
     }
 }

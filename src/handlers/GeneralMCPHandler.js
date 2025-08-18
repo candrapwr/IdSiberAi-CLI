@@ -85,6 +85,13 @@ export class GeneralMCPHandler {
             execute_command: this.tools.executeCommand.bind(this.tools),
             get_working_directory_info: this.tools.getWorkingDirectoryInfo.bind(this.tools),
             
+            // S3 Cloud Storage Operations
+            s3_upload: this.tools.s3Upload.bind(this.tools),
+            s3_download: this.tools.s3Download.bind(this.tools),
+            s3_delete: this.tools.s3Delete.bind(this.tools),
+            s3_search: this.tools.s3Search.bind(this.tools),
+            s3_get_client_info: this.tools.s3GetClientInfo.bind(this.tools),
+            
             // AI Management Operations
             switch_ai_provider: this.switchAIProvider.bind(this),
             list_ai_providers: this.listAIProviders.bind(this),

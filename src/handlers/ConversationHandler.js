@@ -39,6 +39,13 @@ MESSAGE: [brief action description]
 # SYSTEM OPERATIONS TOOLS
 - execute_command(command, options): Execute commands
 
+# S3 OPERATIONS TOOLS
+- s3_upload(key, file_path): Upload file to S3
+- s3_download(key, download_path): Download file from S3  
+- s3_delete(key): Delete file from S3
+- s3_search(prefix, max_keys): Search files in S3
+
+
 # Response rules
 - Use proper tool call format for each action
 - Be direct and concise
