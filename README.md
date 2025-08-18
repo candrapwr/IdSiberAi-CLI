@@ -8,7 +8,7 @@
 
 ## ✨ Features
 
-- 🤖 **Multi-AI Support** - DeepSeek, OpenAI, Claude, Grok, ZhiPuAI
+- 🤖 **Multi-AI Support** - DeepSeek, OpenAI, Claude, Grok, ZhiPuAI, QwenAI
 - 🔄 **Provider Switching** - Switch AI providers on the fly
 - 🛡️ **Auto Fallback** - Automatic provider switching on failures
 - ☁️ **Cloud Storage** - Integrated S3 operations (AWS SDK v3)
@@ -127,9 +127,10 @@ flowchart TD
 |----------|--------|----------|----------|
 | **DeepSeek** | ✅ Active | Fast responses, coding tasks | all model |
 | **OpenAI GPT** | ✅ Active | General purpose, advanced reasoning | gpt-4o, gpt-5 |
-| **Claude** | ✅ Active | Long context, analysis tasks | all model |
+| **Claude** | ✅ Active | Long context, analysis tasks | sonnet 3.7 above, all Opus |
 | **Grok** | ✅ Active | Real-time data, creative tasks | grok-4-0709 |
 | **ZhiPuAI** | ✅ Active | Multilingual, specialized tasks | glm-4, glm-4.5 |
+| **QwenAI** | ✅ Active | Fast, multilingual, coding tasks | qwen-turbo, qwen-plus, qwen-max |
 
 [→ See detailed AI provider guide](./docs/AI_PROVIDERS.md)
 
@@ -149,7 +150,7 @@ flowchart TD
 You: /stats
 
 📊 Current Session:
-  • Multi-AI: 5 providers available
+  • Multi-AI: 6 providers available
   • Tools: 20+ operations ready
   • Success Rate: 98.5%
   • Streaming: Enabled
@@ -166,7 +167,7 @@ You: /stats
 ## 📝 Changelog
 
 ### v2.1.0 (Latest) - Multi-AI & Cloud Edition
-- ✨ **Multi-AI Support** - 5 AI providers with auto-switching
+- ✨ **Multi-AI Support** - 6 AI providers with auto-switching
 - ☁️ **S3 Integration** - Cloud storage operations (AWS SDK v3)
 - 🌊 **Streaming Mode** - Real-time response generation  
 - 📊 **Enhanced Logging** - Comprehensive monitoring

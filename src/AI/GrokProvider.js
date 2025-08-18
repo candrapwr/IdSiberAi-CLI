@@ -12,7 +12,7 @@ export class GrokProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'grok-3-mini';
+        return 'grok-4-0709';
     }
 
     async chat(messages, options = {}) {
@@ -163,6 +163,8 @@ export class GrokProvider extends BaseAIProvider {
     // Override untuk menambahkan model-model Grok yang tersedia
     getAvailableModels() {
         return [
+            'grok-4-0709',
+            'grok-3',
             'grok-3-mini',
         ];
     }
