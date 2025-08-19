@@ -20,6 +20,14 @@ export class GeneralMCPHandler {
         this.onStreamChunk = options.onStreamChunk || null;
         this.onToolExecution = options.onToolExecution || null;
         
+        // Context optimization settings
+        this.enableContextOptimization = options.enableContextOptimization || 
+                                        process.env.ENABLE_CONTEXT_OPTIMIZATION === 'true';
+        this.optimizedActions = options.optimizedActions || 
+                              (process.env.CONTEXT_OPTIMIZATION_ACTIONS ? 
+                               process.env.CONTEXT_OPTIMIZATION_ACTIONS.split(',') : 
+                               ['read_file']);
+        
         // Set logger untuk AIManager
         if (this.logger) {
             this.aiManager.setLogger(this.logger);
@@ -29,7 +37,12 @@ export class GeneralMCPHandler {
         this.initializeTools();
         
         // Initialize handlers
-        this.conversationHandler = new ConversationHandler();
+        this.conversationHandler = new ConversationHandler({
+            enableContextOptimization: this.enableContextOptimization,
+            optimizedActions: this.optimizedActions,
+            debug: options.debug || false
+        });
+        
         this.toolCallHandler = new ToolCallHandler(this.availableTools, this.logger, this.debug, this.sessionId, this.aiManager);
         this.loggingHandler = new LoggingHandler(this.logger, this.aiManager);
         this.requestHandler = new RequestHandler(
@@ -44,6 +57,9 @@ export class GeneralMCPHandler {
             this.onToolExecution
         );
         
+        // Pastikan requestHandler menggunakan context optimization setting yang sama
+        this.requestHandler.setContextOptimizationEnabled(this.enableContextOptimization);
+        
         // Initialize the conversation with system prompt
         this.conversationHandler.initializeSystemPrompt(
             this.aiManager.getAvailableProviders(),
@@ -56,7 +72,9 @@ export class GeneralMCPHandler {
             maxIterations,
             availableProviders: this.aiManager.getAvailableProviders(),
             currentProvider: this.aiManager.currentProvider,
-            loggingEnabled: !!this.logger
+            loggingEnabled: !!this.logger,
+            contextOptimizationEnabled: this.enableContextOptimization,
+            optimizedActions: this.optimizedActions
         });
     }
 
@@ -130,6 +148,8 @@ export class GeneralMCPHandler {
                 this.onStreamChunk,
                 this.onToolExecution
             );
+            // Pastikan setting context optimization sesuai
+            this.requestHandler.setContextOptimizationEnabled(this.enableContextOptimization);
         } else {
             // Perbarui properti di RequestHandler yang sudah ada
             this.requestHandler.streamMode = this.streamMode;
@@ -161,10 +181,53 @@ export class GeneralMCPHandler {
                 this.onStreamChunk,
                 this.onToolExecution
             );
+            // Pastikan setting context optimization sesuai
+            this.requestHandler.setContextOptimizationEnabled(this.enableContextOptimization);
         } else {
             // Gunakan metode untuk mengatur handler daripada membuat objek baru
             this.requestHandler.setToolExecutionHandler(onToolExecution);
         }
+    }
+    
+    // Context Optimization methods
+    setContextOptimizationEnabled(enabled) {
+        this.enableContextOptimization = enabled;
+        
+        // Update in conversation handler
+        this.conversationHandler.setContextOptimizationEnabled(enabled);
+        
+        // Update in request handler
+        if (this.requestHandler) {
+            this.requestHandler.setContextOptimizationEnabled(enabled);
+        }
+        
+        return this.enableContextOptimization;
+    }
+    
+    getContextOptimizerStatus() {
+        return this.conversationHandler.getContextOptimizerStatus();
+    }
+    
+    setContextOptimizerDebug(enabled, level = 1) {
+        return this.conversationHandler.setContextOptimizerDebug(enabled, level);
+    }
+    
+    setOptimizedActions(actions) {
+        this.optimizedActions = actions;
+        return this.conversationHandler.setOptimizedActions(actions);
+    }
+    
+    getOptimizedActions() {
+        return this.conversationHandler.getOptimizedActions();
+    }
+    
+    getContextOptimizationStats() {
+        return this.conversationHandler.getContextOptimizationStats();
+    }
+    
+    // Manually trigger context optimization
+    optimizeContext() {
+        return this.conversationHandler.optimizeContext();
     }
 
     // AI Management Methods
@@ -266,6 +329,7 @@ export class GeneralMCPHandler {
     // Session information
     getSessionInfo() {
         const aiInfo = this.aiManager.getProvidersInfo();
+        const contextOptimizerStatus = this.conversationHandler.getContextOptimizerStatus();
         
         return {
             sessionId: this.sessionId,
@@ -277,7 +341,8 @@ export class GeneralMCPHandler {
             loggingEnabled: !!this.logger,
             currentAIProvider: this.aiManager.currentProvider,
             availableAIProviders: this.aiManager.getAvailableProviders(),
-            aiProvidersInfo: aiInfo
+            aiProvidersInfo: aiInfo,
+            contextOptimization: contextOptimizerStatus
         };
     }
 }
