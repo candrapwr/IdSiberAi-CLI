@@ -13,7 +13,8 @@
 - 🛡️ **Auto Fallback** - Automatic provider switching on failures
 - 🌐 **Dual Interface** - Choose between CLI and Web interfaces
 - ☁️ **Cloud Storage** - Integrated S3 operations (AWS SDK v3)
-- 🛠️ **20+ Tools** - File ops, analysis, system automation, S3
+- 🗄️ **Database Operations** - MySQL, PostgreSQL, SQLite database management
+- 🛠️ **25+ Tools** - File ops, analysis, system automation, S3, database
 - 📊 **Smart Analysis** - Language-aware code structure analysis
 - 🌊 **Real-time Streaming** - Live response generation
 - 📝 **Comprehensive Logging** - Track all operations and performance
@@ -76,6 +77,14 @@ You: "What can you help me with?"
 "show me performance statistics"
 ```
 
+### Database Operations
+```
+"connect to MySQL database and show all tables"
+"execute SELECT query on PostgreSQL database"
+"create a new SQLite database with users table"
+"backup MySQL database to SQL file"
+```
+
 ## 🏗️ Architecture
 
 ```mermaid
@@ -89,6 +98,7 @@ flowchart TD
     E --> G["☁️ S3 Operations"]
     E --> H["💻 System Operations"]
     E --> I["🔍 Analysis Tools"]
+    E --> J["🗄️ Database Operations"]
     
     F --> J["📊 Tool Results"]
     G --> J
@@ -108,7 +118,7 @@ flowchart TD
 
 1. **User Input** → Natural language request
 2. **AI Processing** → Understands request & determines needed tools
-3. **Tool Execution** → Runs appropriate operations (file, S3, system, analysis)
+3. **Tool Execution** → Runs appropriate operations (file, S3, system, analysis, database)
 4. **Results Processing** → Tool results are sent back to AI (not directly to user)
 5. **AI Analysis** → AI processes tool results and determines next steps
 6. **Iteration** → May use more tools if needed based on results
@@ -123,6 +133,7 @@ flowchart TD
 | **Cloud Operations** | S3 upload/download, backup, synchronization |
 | **Data Processing** | Analysis, transformation, validation, reporting |
 | **System Automation** | Build tasks, deployment, maintenance, monitoring |
+| **Database Management** | Query execution, data migration, backup, schema management |
 
 ## 🤖 Supported AI Providers
 
@@ -154,7 +165,7 @@ You: /stats
 
 📊 Current Session:
   • Multi-AI: 6 providers available
-  • Tools: 20+ operations ready
+  • Tools: 25+ operations ready
   • Success Rate: 98.5%
   • Streaming: Enabled
 ```
@@ -192,6 +203,7 @@ We welcome contributions! See our [Development Guide](./docs/DEVELOPMENT.md) for
 - Adding new AI providers
 - Creating custom tools
 - Extending S3 operations
+- Adding database operations
 - Improving performance
 - Writing documentation
 
