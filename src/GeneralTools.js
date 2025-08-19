@@ -3,6 +3,7 @@ import { DirectoryTools } from './tools/DirectoryTools.js';
 import { AnalysisTools } from './tools/AnalysisTools.js';
 import { SystemTools } from './tools/SystemTools.js';
 import { S3Tools } from './tools/S3Tools.js';
+import { DatabaseTools } from './tools/DatabaseTools.js';
 
 /**
  * GeneralTools - Main class that combines all tools
@@ -19,6 +20,7 @@ export class GeneralTools {
         this.analysisTools = new AnalysisTools(workingDirectory);
         this.systemTools = new SystemTools(workingDirectory);
         this.s3Tools = new S3Tools(workingDirectory);
+        this.dbTools = new DatabaseTools;
     }
 
     // File System Operations
@@ -52,6 +54,11 @@ export class GeneralTools {
 
     async editFile(filePath, edits) {
         return await this.fileTools.editFile(filePath, edits);
+    }
+
+    // Database Operations
+    async executeQuery(query, params) {
+        return await this.dbTools.executeQuery(query, params);
     }
 
     // Directory Operations
