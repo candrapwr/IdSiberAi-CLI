@@ -12,7 +12,7 @@ export class ZhiPuAIProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'glm-4.5';
+        return 'glm-4-plus';
     }
 
     async chat(messages, options = {}) {
