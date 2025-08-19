@@ -92,16 +92,14 @@ export class WebServer {
         this.io.on('connection', (socket) => {
             this.activeConnections++;
             console.log(chalk.green(`🔌 Client connected (${this.activeConnections} active connections)`));
-            
-            // Configure stream handler for this socket
+
             const streamHandler = (chunk) => {
-                // Log chunk size for debugging
                 socket.emit('stream-chunk', { chunk });
             };
-            
+
             // Configure tool execution handler for this socket
             const toolExecutionHandler = (toolName, result) => {
-                socket.emit('stream-chunk', {chunk: 'tool-start'});
+                socket.emit('stream-chunk', {chunk: 'newMessageAssistant'});
                 socket.emit('tool-execution', {
                     tool: toolName,
                     result: result
