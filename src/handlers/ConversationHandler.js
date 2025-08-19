@@ -46,6 +46,8 @@ MESSAGE: [brief action description]
 - s3_search(prefix, max_keys): Search files in S3
 - s3_set_acl(key, acl): Change file access permissions ('private'|'public-read'|'public-read-write'|etc)
 
+# DATABASE OPERATIONS TOOLS
+- execute_query(query, params): Execute SQL query (supports MySQL/PostgreSQL)
 
 # Response rules
 - Use proper tool call format for each action

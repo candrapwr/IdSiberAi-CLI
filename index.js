@@ -530,6 +530,7 @@ class GeneralMCPCLI {
         console.log('  "upload file.txt to S3 bucket"');
         console.log('  "download myfile.json from S3"');
         console.log('  "search S3 for files with prefix data/"');
+        console.log('  "execute SQL query: SELECT * FROM users"');
         console.log('  "backup all my .js files to a backup folder"');
         console.log('  "switch to OpenAI provider"');
         console.log('  "test all AI providers"');
@@ -543,6 +544,7 @@ class GeneralMCPCLI {
         console.log('  📊  Data processing and manipulation');
         console.log('  🔧  Development workflow assistance');
         console.log('  ☁️  Cloud storage management (S3)');
+        console.log('  🗃️  Database operations (MySQL/PostgreSQL)');
         console.log('  📜  Logging and usage monitoring');
         console.log('  🤖  Multi-AI provider management');
         
@@ -578,6 +580,9 @@ class GeneralMCPCLI {
             ],
             'S3 Cloud Storage Operations': [
                 's3_upload', 's3_download', 's3_delete', 's3_search', 's3_get_client_info'
+            ],
+            'Database Operations': [
+                'execute_query'
             ],
             'AI Management Operations': [
                 'switch_ai_provider', 'list_ai_providers', 'get_ai_provider_info', 'test_ai_providers'

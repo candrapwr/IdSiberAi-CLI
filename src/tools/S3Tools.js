@@ -11,15 +11,11 @@ import { ValidationHelper } from './ValidationHelper.js';
  */
 export class S3Tools {
   constructor(workingDirectory = process.cwd()) {
-    if (!process.env.S3_ACCESS_KEY_ID || !process.env.S3_SECRET_ACCESS_KEY || !process.env.S3_REGION || !process.env.S3_BUCKET) {
-      throw new Error('AWS S3 configuration missing in .env file');
-    }
-    
     // AWS SDK v3 - New S3Client with improved performance
     this.s3Client = new S3Client({
       region: process.env.S3_REGION,
       endpoint: process.env.S3_ENDPOINT,
-      forcePathStyle: true, // Required for custom endpoints like CloudHost.id
+      forcePathStyle: true,
       credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY_ID,
         secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,

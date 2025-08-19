@@ -7,7 +7,6 @@ import { ToolCallHandler } from './ToolCallHandler.js';
 import { LoggingHandler } from './LoggingHandler.js';
 import { RequestHandler } from './RequestHandler.js';
 import crypto from 'crypto';
-import chalk from 'chalk';
 
 export class GeneralMCPHandler {
     constructor(apiKeys, workingDirectory, maxIterations = 15, options = {}) {
@@ -94,6 +93,9 @@ export class GeneralMCPHandler {
             s3_search: this.tools.s3Search.bind(this.tools),
             s3_set_acl: this.tools.s3SetAcl.bind(this.tools),
             s3_get_client_info: this.tools.s3GetClientInfo.bind(this.tools),
+            
+            // Database Operations
+            execute_query: this.tools.executeQuery.bind(this.tools),
             
             // AI Management Operations
             switch_ai_provider: this.switchAIProvider.bind(this),
