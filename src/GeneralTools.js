@@ -57,8 +57,8 @@ export class GeneralTools {
     }
 
     // Database Operations
-    async executeQuery(query, params) {
-        return await this.dbTools.executeQuery(query, params);
+    async executeQuery(query, database = null) {
+        return await this.dbTools.executeQuery(query, database);
     }
 
     // Directory Operations
