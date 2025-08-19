@@ -175,6 +175,11 @@ class GeneralMCPCLI {
                 await this.toggleStreamMode();
                 break;
                 
+            case '/context':
+            case '/ctx':
+                await this.manageContextOptimization();
+                break;
+                
             case '/stats':
                 await this.showStats();
                 break;
@@ -352,6 +357,157 @@ class GeneralMCPCLI {
             console.log(chalk.gray('System will only use the currently selected provider'));
         }
     }
+    
+    async manageContextOptimization() {
+        console.log(chalk.cyan.bold('\n🧠 Context Optimization Manager'));
+        console.log(chalk.gray('='.repeat(50)));
+        
+        // Get current status first
+        const status = this.mcp.getContextOptimizerStatus();
+        console.log(chalk.cyan(`Current Status: ${status.enabled ? chalk.green('✅ Enabled') : chalk.red('❌ Disabled')}`));
+        console.log(chalk.cyan(`Version: ${status.version || '1.0.0'}`));
+        console.log(chalk.cyan(`Debug: ${status.debug ? chalk.green(`✅ Enabled (Level ${status.debugLevel})`) : chalk.gray('❌ Disabled')}`));
+        console.log(chalk.cyan(`Optimized Actions: ${status.optimizedActions.join(', ')}`));
+        console.log(chalk.cyan(`Max Instances: ${status.maxInstances}`));
+        
+        if (status.stats.totalOptimizations > 0) {
+            console.log(chalk.cyan('\nOptimization Stats:'));
+            console.log(`  Total Optimizations: ${status.stats.totalOptimizations}`);
+            console.log(`  Messages Removed: ${status.stats.messagesRemoved}`);
+            console.log(`  Estimated Tokens Saved: ${status.stats.tokensSaved}`);
+            console.log(`  Last Optimization: ${status.stats.lastOptimizationTime ? new Date(status.stats.lastOptimizationTime).toLocaleString() : 'Never'}`);
+        }
+        
+        console.log();
+        
+        const { action } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'action',
+                message: 'Choose an action:',
+                choices: [
+                    { name: `${status.enabled ? 'Disable' : 'Enable'} Context Optimization`, value: 'toggle' },
+                    { name: 'Configure Optimized Actions', value: 'actions' },
+                    { name: 'Toggle Debug Logging', value: 'debug' },
+                    { name: 'Manual Optimize Now', value: 'optimize' },
+                    { name: 'Reset Statistics', value: 'reset' },
+                    { name: 'Back to Chat', value: 'back' }
+                ]
+            }
+        ]);
+        
+        switch(action) {
+            case 'toggle':
+                const newStatus = !status.enabled;
+                this.mcp.setContextOptimizationEnabled(newStatus);
+                console.log(chalk.green(`✅ Context Optimization ${newStatus ? 'Enabled' : 'Disabled'}`));
+                break;
+                
+            case 'actions':
+                await this.configureOptimizedActions();
+                break;
+                
+            case 'optimize':
+                console.log(chalk.yellow('🔄 Manually optimizing context...'));
+                const result = this.mcp.optimizeContext();
+                if (result.optimized) {
+                    console.log(chalk.green(`✅ Optimization successful! Removed ${result.messagesRemoved} messages.`));
+                    console.log(chalk.gray(`Original: ${result.originalLength} messages → New: ${result.newLength} messages`));
+                } else {
+                    console.log(chalk.yellow('⚠️ No redundant messages found to optimize.'));
+                }
+                break;
+                
+            case 'debug':
+                await this.toggleDebugLogging();
+                break;
+                
+            case 'reset':
+                this.mcp.resetContextOptimizationStats();
+                console.log(chalk.green('✅ Optimization statistics reset.'));
+                break;
+                
+            case 'back':
+                // Do nothing, return to chat
+                break;
+        }
+    }
+    
+    async toggleDebugLogging() {
+        const status = this.mcp.getContextOptimizerStatus();
+        const currentDebug = status.debug || false;
+        const currentLevel = status.debugLevel || 1;
+        
+        // Pilihan debug level
+        const { debugOption } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'debugOption',
+                message: 'Debug logging:',
+                choices: [
+                    { name: 'Disable debug logging', value: 'off' },
+                    { name: 'Minimal logging (level 1)', value: 'min' },
+                    { name: 'Detailed logging (level 2)', value: 'med' },
+                    { name: 'Verbose logging (level 3)', value: 'max' }
+                ],
+                default: currentDebug ? 
+                    (currentLevel === 3 ? 'max' : (currentLevel === 2 ? 'med' : 'min')) : 
+                    'off'
+            }
+        ]);
+        
+        let newDebug = false;
+        let newLevel = 1;
+        
+        switch(debugOption) {
+            case 'off':
+                newDebug = false;
+                break;
+            case 'min':
+                newDebug = true;
+                newLevel = 1;
+                break;
+            case 'med':
+                newDebug = true;
+                newLevel = 2;
+                break;
+            case 'max':
+                newDebug = true;
+                newLevel = 3;
+                break;
+        }
+        
+        // Atur debug setting
+        this.mcp.setContextOptimizerDebug(newDebug, newLevel);
+        
+        const statusString = newDebug ? 
+            `Enabled (level ${newLevel})` : 
+            'Disabled';
+        
+        console.log(chalk.green(`✅ Debug logging set to: ${statusString}`));
+    }
+    
+    async configureOptimizedActions() {
+        const currentActions = this.mcp.getOptimizedActions();
+        const allTools = this.mcp.getToolsList();
+        
+        const { selectedActions } = await inquirer.prompt([
+            {
+                type: 'checkbox',
+                name: 'selectedActions',
+                message: 'Select actions to optimize:',
+                choices: allTools.map(tool => ({
+                    name: tool,
+                    value: tool,
+                    checked: currentActions.includes(tool)
+                })),
+                validate: (input) => input.length > 0 ? true : 'Select at least one action'
+            }
+        ]);
+        
+        this.mcp.setOptimizedActions(selectedActions);
+        console.log(chalk.green(`✅ Updated optimized actions: ${selectedActions.join(', ')}`));
+    }
 
     async showLogs() {
         console.log(chalk.cyan.bold('\n📜 Logs Management'));
@@ -506,6 +662,8 @@ class GeneralMCPCLI {
         console.log('  /tools    - Show available tools');
         console.log('  /logs     - Manage and view logs');
         console.log('  /stream   - Toggle streaming mode');
+        console.log('  /context  - Manage context optimization');
+        console.log('  /ctx      - Shortcut for context management');
         console.log('  /stats    - Show usage statistics');
         console.log('  /clear    - Clear conversation history');
         console.log('  /history  - Show conversation history');

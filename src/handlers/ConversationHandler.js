@@ -1,6 +1,16 @@
+import { ContextOptimizer } from '../contextManager/index.js';
+
 export class ConversationHandler {
-    constructor() {
+    constructor(options = {}) {
         this.conversationHistory = [];
+        
+        // Initialize Context Optimizer
+        this.contextOptimizer = new ContextOptimizer({
+            enabled: options.enableContextOptimization !== false,
+            actions: options.optimizedActions || ['read_file'],
+            maxInstances: options.maxInstances || 1,
+            debug: options.debug || false
+        });
     }
     
     initializeSystemPrompt(availableAIProviders, currentProvider) {
@@ -136,5 +146,93 @@ Please, what can I help you with....
     
     getMessageCount() {
         return this.conversationHistory.length;
+    }
+    
+    /**
+     * Mengoptimalkan konteks percakapan dengan menghapus redundant tool calls
+     * @returns {Object} Hasil optimasi
+     */
+    optimizeContext() {
+        // Clone history terlebih dahulu
+        const originalHistory = [...this.conversationHistory];
+        const systemPrompt = originalHistory[0]; // Simpan system prompt
+        
+        // Optimasi dilakukan pada semua pesan kecuali system prompt
+        const messagesForOptimization = originalHistory.slice(1);
+        
+        // Lakukan optimasi
+        const result = this.contextOptimizer.optimizeConversation(messagesForOptimization);
+        
+        if (result.optimized) {
+            // Gabungkan kembali system prompt dengan hasil optimasi
+            this.conversationHistory = [systemPrompt, ...result.messages];
+        }
+        
+        return {
+            optimized: result.optimized,
+            messagesRemoved: result.removed,
+            newLength: this.conversationHistory.length,
+            originalLength: originalHistory.length,
+            stats: this.contextOptimizer.getStats()
+        };
+    }
+    
+    /**
+     * Mengaktifkan atau menonaktifkan context optimization
+     * @param {boolean} enabled Status enabled
+     */
+    setContextOptimizationEnabled(enabled) {
+        return this.contextOptimizer.setEnabled(enabled);
+    }
+    
+    /**
+     * Mengatur action mana yang akan dioptimasi
+     * @param {Array<string>} actions Daftar nama action
+     */
+    setOptimizedActions(actions) {
+        return this.contextOptimizer.setOptimizedActions(actions);
+    }
+    
+    /**
+     * Mendapatkan daftar action yang dioptimasi
+     */
+    getOptimizedActions() {
+        return this.contextOptimizer.getOptimizedActions();
+    }
+    
+    /**
+     * Mendapatkan statistik optimasi
+     */
+    getContextOptimizationStats() {
+        return this.contextOptimizer.getStats();
+    }
+    
+    /**
+     * Reset statistik optimasi
+     */
+    resetContextOptimizationStats() {
+        return this.contextOptimizer.resetStats();
+    }
+    
+    /**
+     * Mendapatkan status konteks optimasi
+     */
+    getContextOptimizerStatus() {
+        return {
+            enabled: this.contextOptimizer.enabled,
+            optimizedActions: this.contextOptimizer.getOptimizedActions(),
+            maxInstances: this.contextOptimizer.maxInstances,
+            stats: this.contextOptimizer.getStats(),
+            version: this.contextOptimizer.version || 'unknown',
+            debug: this.contextOptimizer.debug,
+            debugLevel: this.contextOptimizer.debugLevel
+        };
+    }
+    
+    /**
+     * Mengatur debug mode pada context optimizer
+     */
+    setContextOptimizerDebug(enabled, level = 1) {
+        return this.contextOptimizer.setDebug(enabled, level);
     }
 }

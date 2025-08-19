@@ -11,6 +11,9 @@ export class RequestHandler {
         this.streamMode = streamMode;
         this.onStreamChunk = onStreamChunk;
         
+        // Default settings for context optimization
+        this.enableContextOptimization = process.env.ENABLE_CONTEXT_OPTIMIZATION === 'true';
+        
         // If onToolExecution is provided, set it on the toolCallHandler
         if (onToolExecution) {
             this.toolCallHandler.setToolExecutionHandler(onToolExecution);
@@ -22,6 +25,13 @@ export class RequestHandler {
         // Pastikan handler diteruskan ke ToolCallHandler
         this.toolCallHandler.setToolExecutionHandler(onToolExecution);
         console.log('Tool execution handler diperbarui di RequestHandler');
+    }
+    
+    // Metode untuk mengatur context optimization
+    setContextOptimizationEnabled(enabled) {
+        this.enableContextOptimization = enabled;
+        this.conversationHandler.setContextOptimizationEnabled(enabled);
+        return this.enableContextOptimization;
     }
 
     async handleUserRequest(userInput) {
@@ -36,11 +46,25 @@ export class RequestHandler {
         const enableFallback = process.env.ENABLE_AI_FALLBACK === 'true';
         let usedFallback = false;
         let originalProvider = this.aiManager.currentProvider;
+        
+        // Context optimization stats
+        let contextOptimizationStats = null;
 
         try {
             while (iterations < this.maxIterations) {
                 iterations++;
                 console.log(chalk.gray('-'.repeat(50)));
+                
+                // Lakukan context optimization jika diaktifkan
+                if (this.enableContextOptimization) {
+                    // Optimasi dilakukan sebelum setiap chat dengan AI
+                    const optimizationResult = this.conversationHandler.optimizeContext();
+                    
+                    if (optimizationResult.optimized) {
+                        contextOptimizationStats = optimizationResult;
+                        console.log(chalk.blue(`🧹 Context optimized: removed ${optimizationResult.messagesRemoved} redundant messages`));
+                    }
+                }
                 
                 // Use appropriate chat method based on fallback setting
                 let aiResponse;
@@ -148,7 +172,9 @@ export class RequestHandler {
                 processingTime,
                 aiProvider: this.aiManager.currentProvider,
                 originalProvider: originalProvider,
-                fallbackUsed: usedFallback
+                fallbackUsed: usedFallback,
+                contextOptimized: contextOptimizationStats?.optimized || false,
+                contextOptimizationStats: contextOptimizationStats
             });
 
             return {
@@ -160,7 +186,9 @@ export class RequestHandler {
                 sessionId: this.sessionId,
                 aiProvider: this.aiManager.currentProvider,
                 originalProvider: usedFallback ? originalProvider : null,
-                fallbackUsed: usedFallback
+                fallbackUsed: usedFallback,
+                contextOptimized: contextOptimizationStats?.optimized || false,
+                contextOptimizationStats: contextOptimizationStats
             };
 
         } catch (error) {
@@ -184,6 +212,4 @@ export class RequestHandler {
             };
         }
     }
-
-
 }
