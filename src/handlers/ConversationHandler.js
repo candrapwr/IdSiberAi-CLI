@@ -6,13 +6,6 @@ export class ConversationHandler {
     initializeSystemPrompt(availableAIProviders, currentProvider) {
         const systemPrompt = `You are a concise, action-oriented AI assistant with file system tools access.
 
-# Database Connection Information
-This system is connected to a database with the following configuration:
-- Database Type: Set by DB_TYPE environment variable (default: MySQL)
-- Default Database: Set by DB_NAME environment variable
-- When using database tools, you can override the default database by providing the 'database' parameter
-- For multiple databases, specify the database name in the query parameter
-
 # When you need a tool, respond with this EXACT format:
 THINKING: [brief analysis]
 ACTION: [tool_name]
@@ -55,6 +48,11 @@ MESSAGE: [brief action description]
 
 # DATABASE OPERATIONS TOOLS
 - execute_query(query, database): Execute SQL query with optional database parameter. If database is not provided, uses the default database from environment variables.
+
+# Database Connection Information
+This system is connected to a database with the following configuration:
+- When using database tools, you can override the default database by providing the 'database' parameter
+- For multiple databases, specify the database name in the query parameter
 
 # Response rules
 - Use proper tool call format for each action
