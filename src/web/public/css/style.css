@@ -304,19 +304,33 @@ html, body {
     line-height: 1.7;
 }
 
-.message-assistant .message-content pre {
+pre {
     background-color: var(--code-bg);
-    color: var(--text-primary);
-    border-radius: 8px;
-    padding: 1rem;
-    margin: 0.75rem 0;
+    color: var(--code-text);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
     overflow-x: auto;
-    border: 1px solid var(--border-color);
+    margin: 0.5rem 0;
+    tab-size: 4;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    position: relative;
 }
 
-.message-assistant .message-content code {
-    font-family: 'Fira Code', 'Menlo', 'Monaco', 'Courier New', monospace;
-    font-size: 0.9rem;
+code {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: var(--code-only-bg);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.3rem;
+    font-size: 0.9em;
+    color: var(--code-only-text);
+}
+
+pre code {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
 }
 
 .message-assistant .message-content p {

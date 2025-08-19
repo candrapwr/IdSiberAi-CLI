@@ -139,11 +139,12 @@ export function handleStreamChunk(data) {
     
     // Append chunk to current message
     if (data && data.chunk) {
-        if(data.chunk != 'tool-start'){
+        if(data.chunk != 'newMessageAssistant'){
             currentMessageContent += data.chunk;
             
             // Format and update the content
             const contentDiv = streamMessageDiv.querySelector('.message-content');
+            console.log(currentMessageContent)
             contentDiv.innerHTML = formatAssistantMessage(currentMessageContent);
             
             // Apply syntax highlighting
@@ -154,7 +155,6 @@ export function handleStreamChunk(data) {
         }else{
             streamMessageDiv = null;
             currentMessageContent = '';
-            streamStarted = false;
         }
     } else {
         console.warn('Received empty chunk');
@@ -348,7 +348,15 @@ export function displayConversationHistory(history) {
     // Add each message to the UI
     history.forEach(msg => {
         if (msg.role === 'user' || msg.role === 'assistant') {
-            addMessage(msg.role, msg.content, msg.metadata || {});
+            if(msg.role === 'user'){
+                if(msg.content.startsWith("Tool result")){
+                    addMessage(msg.role, `${msg.content.slice(0, 100)}...`, msg.metadata || {});
+                }else{
+                    addMessage(msg.role, msg.content, msg.metadata || {});
+                }
+            }else{
+                addMessage(msg.role, msg.content, msg.metadata || {});
+            }
         }
     });
 }
