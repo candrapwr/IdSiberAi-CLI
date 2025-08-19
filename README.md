@@ -79,10 +79,7 @@ You: "What can you help me with?"
 
 ### Database Operations
 ```
-"connect to MySQL database and show all tables"
-"execute SELECT query on PostgreSQL database"
-"create a new SQLite database with users table"
-"backup MySQL database to SQL file"
+"connect to MySQL or PostgreSQL database and execute SELECT query"
 ```
 
 ## 🏗️ Architecture
@@ -133,7 +130,7 @@ flowchart TD
 | **Cloud Operations** | S3 upload/download, backup, synchronization |
 | **Data Processing** | Analysis, transformation, validation, reporting |
 | **System Automation** | Build tasks, deployment, maintenance, monitoring |
-| **Database Management** | Query execution, data migration, backup, schema management |
+| **Database Management** | Query execution |
 
 ## 🤖 Supported AI Providers
 
