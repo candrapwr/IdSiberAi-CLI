@@ -65,8 +65,8 @@ export function handleSessionInfo(data, socket) {
     currentProvider = data.currentAIProvider;
     
     // Update session info display
-    document.getElementById('currentProvider').innerHTML = `<strong>Provider:</strong> <span class="text-primary">${data.currentAIProvider}</span>`;
-    document.getElementById('sessionId').innerHTML = `<strong>Session:</strong> <span class="text-primary">${data.sessionId.substring(0, 8)}...</span>`;
+    document.getElementById('currentProvider').innerHTML = `<i class='bi bi-lightning'></i> <strong>Provider:</strong> <span class="text-primary">${data.currentAIProvider}</span>`;
+    document.getElementById('sessionId').innerHTML = `<i class='bi bi-file-earmark-text'></i> <strong>Session:</strong> <span class='text-primary'>${data.sessionId.substring(0, 8)}...</span>`;
     
     // Populate providers list
     populateProvidersList(data.availableAIProviders, data.aiProvidersInfo, data.currentAIProvider, socket);
@@ -230,7 +230,7 @@ function populateProvidersList(providers, providersInfo, currentProvider, socket
                 ${isActive ? '<span class="badge bg-primary">Current</span>' : ''}
             </div>
             <div class="small session-details">
-                ${providerInfo.defaultModel}
+                <i class='bi bi-file-earmark-text'></i> ${providerInfo.defaultModel}
             </div>
         `;
         
