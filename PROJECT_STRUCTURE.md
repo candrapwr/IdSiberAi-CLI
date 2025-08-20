@@ -1,125 +1,116 @@
 # IdSiberAi-CLI Project Structure
 
-**IdSiberAi-CLI** is a Multi-Provider AI Assistant with dual interface support (CLI & Web) that integrates 7 different AI providers (OpenAI, Claude, DeepSeek, Grok, QwenAI, ZhiPuAI) with comprehensive file system tools, database operations, and cloud storage capabilities.
-
-This document provides an overview of the project's file and directory structure.
+This document provides a comprehensive overview of the project's file and directory structure for reference and future development.
 
 ## Directory Structure
 
 ```
-IdSiberAi-CLI/
+.
 ├── .env                        # Environment variables configuration
 ├── .env.example               # Example environment configuration
 ├── .gitignore                 # Git ignore rules
 ├── LICENSE                    # MIT License file
 ├── README.md                  # Main project documentation
-├── PROJECT_STRUCTURE.md       # This file - project structure overview
-├── index.js                   # Main application entry point (CLI mode)
-├── package.json               # Project metadata and dependencies
-├── package-lock.json          # Dependency lock file
-├── demo/                      # Demo files and examples
-│   ├── abc.txt                # Sample text file for testing
-│   ├── game_project/          # Sample game project directory
-│   └── game_project.zip       # Sample project archive
+├── ai_chat_cli/              # CLI-specific components
+│   └── providers/             # AI provider-specific CLI components
 ├── docs/                      # Documentation files
 │   ├── AI_PROVIDERS.md        # AI providers documentation
 │   ├── CHANGELOG.md           # Version history and changes
-│   ├── CONTEXT_OPTIMIZATION.md # Context optimization strategies
-│   ├── EXAMPLES.md            # Usage examples and tutorials
+│   ├── EXAMPLES.md            # Usage examples
 │   ├── INSTALLATION.md        # Installation instructions
 │   ├── README.md              # Documentation index
-│   ├── S3_GUIDE.md            # AWS S3 integration guide
+│   ├── S3_GUIDE.md            # S3 integration guide
 │   ├── TOOLS.md               # Available tools documentation
-│   ├── TROUBLESHOOTING.md     # CLI troubleshooting guide
-│   ├── WEB_INTERFACE.md       # Web interface documentation
-│   └── WEB_TROUBLESHOOTING.md # Web interface troubleshooting
-├── logs/                      # Application logs (auto-generated)
-│   ├── api_YYYY-MM-DD.log     # API call logs
-│   ├── conversation_YYYY-MM-DD.log # Conversation logs
-│   ├── errors_YYYY-MM-DD.log  # Error logs
-│   └── tools_YYYY-MM-DD.log   # Tool execution logs
-├── node_modules/              # Node.js dependencies (auto-generated)
-└── src/                       # Source code directory
-    ├── AI/                    # AI provider implementations
-    │   ├── AIManager.js       # Multi-provider management and switching
-    │   ├── BaseAIProvider.js  # Base class for all AI providers
-    │   ├── ClaudeProvider.js  # Anthropic Claude implementation
+│   └── TROUBLESHOOTING.md     # Common issues and solutions
+├── index.js                   # Main application entry point
+├── logs/                      # Application logs
+│   ├── api_2025-08-18.log     # API call logs
+│   ├── conversation_2025-08-18.log # Conversation logs
+│   ├── errors_2025-08-18.log  # Error logs
+│   └── tools_2025-08-18.log   # Tool execution logs
+├── node_modules/              # Node.js dependencies
+├── package-lock.json          # Dependency lock file
+├── package.json               # Project metadata and dependencies
+└── src/                       # Source code
+    ├── AI/                    # AI providers implementation
+    │   ├── AIManager.js       # AI provider management
+    │   ├── BaseAIProvider.js  # Base class for AI providers
+    │   ├── ClaudeProvider.js  # Claude AI implementation
     │   ├── DeepSeekProvider.js # DeepSeek AI implementation
-    │   ├── GrokProvider.js    # X Grok AI implementation
-    │   ├── OpenAIProvider.js  # OpenAI GPT implementation
-    │   ├── QwenAIProvider.js  # Alibaba Qwen AI implementation
-    │   ├── ZhiPuAIProvider.js # ZhiPu GLM AI implementation
-    │   └── index.js           # AI module exports and initialization
-    ├── contextManager/        # Context optimization system
-    │   ├── ContextOptimizer.js # Smart context management and compression
-    │   └── index.js           # Context manager exports
-    ├── handlers/              # Request and response processing
-    │   ├── ConversationHandler.js # Conversation state management
-    │   ├── GeneralMCPHandler.js # Main MCP handler
-    │   ├── LoggingHandler.js  # Logging management
-    │   ├── RequestHandler.js  # User request processing and routing
-    │   └── ToolCallHandler.js # AI tool execution and response handling
-    ├── tools/                 # Tool implementations by category
-    │   ├── AnalysisTools.js   # Code analysis and file inspection tools
-    │   ├── DatabaseTools.js   # Database operations (MySQL, PostgreSQL)
-    │   ├── DirectoryTools.js  # Directory operations and management
-    │   ├── FileTools.js       # File operations (CRUD, search, manipulation)
-    │   ├── S3Tools.js         # AWS S3 cloud storage integration
-    │   ├── SystemTools.js     # System information and operations
-    │   ├── ValidationHelper.js # Input validation and sanitization
-    │   └── index.js           # Tools module exports
-    ├── web/                   # Web interface components
-    │   ├── web_server.js      # Express.js web server with Socket.IO
-    │   └── public/            # Static web assets
-    │       ├── index.html     # Main web interface HTML
-    │       ├── favicon.svg    # Web interface favicon
-    │       ├── css/           # Stylesheets
-    │       │   └── style.css  # Main stylesheet for web UI
-    │       └── js/            # Client-side JavaScript
-    │           ├── main.js    # Main web application logic
-    │           └── modules/   # Modular client-side components
-    │               ├── api.js     # API communication module
-    │               ├── handlers.js # Client-side event handlers
-    │               └── ui.js      # UI management and interactions
-    ├── DebugHelper.js         # Debugging utilities and helpers
+    │   ├── GrokProvider.js    # Grok AI implementation
+    │   ├── OpenAIProvider.js  # OpenAI implementation
+    │   ├── QwenAIProvider.js  # QwenAI implementation
+    │   ├── ZhiPuAIProvider.js # ZhiPuAI implementation
+    │   └── index.js           # AI module exports
+    ├── DebugHelper.js         # Debugging utilities
     ├── GeneralTools.js        # General utility functions
-    └── Logger.js              # Centralized logging system
+    ├── Logger.js              # Logging implementation
+    ├── handlers/              # Request and response handlers
+    │   ├── ConversationHandler.js # Conversation management
+    │   ├── GeneralMCPHandler.js # Main MCP (Multi-AI) handler
+    │   ├── LoggingHandler.js  # Logging management
+    │   ├── RequestHandler.js  # User request processing
+    │   └── ToolCallHandler.js # Tool execution handling
+    └── tools/                 # Tool implementations
+        ├── AnalysisTools.js   # Code and file analysis tools
+        ├── DirectoryTools.js  # Directory operation tools
+        ├── FileTools.js       # File operation tools
+        ├── S3Tools.js         # AWS S3 integration tools
+        ├── SystemTools.js     # System operation tools
+        └── ValidationHelper.js # Input validation utilities
 ```
 
-## Core Components
+## Key Components
 
-### Entry Points
-- **index.js** - CLI application entry point
-- **src/web/web_server.js** - Web interface server
+### Core Application
+- **index.js**: Main entry point that initializes the CLI interface and handles user interactions
 
-### AI Providers (7 providers)
-- OpenAI, Claude, DeepSeek, Grok, QwenAI, ZhiPuAI
-- Managed by **AIManager.js** with **BaseAIProvider.js** as base class
+### AI Providers
+- **src/AI/**: Contains implementations for all supported AI providers
+- **src/AI/AIManager.js**: Manages multiple AI providers, handles switching and fallback
 
 ### Handlers
-- **GeneralMCPHandler.js** - Main MCP coordination
-- **ToolCallHandler.js** - Tool execution management
-- **RequestHandler.js** - Request processing
-- **ConversationHandler.js** - Conversation state
-- **LoggingHandler.js** - Logging operations
+- **src/handlers/GeneralMCPHandler.js**: Core handler that coordinates AI providers and tools
+- **src/handlers/ToolCallHandler.js**: Processes tool calls from AI responses
+- **src/handlers/RequestHandler.js**: Processes user requests
 
-### Tools Categories
-- **FileTools.js** - File operations
-- **DirectoryTools.js** - Directory operations  
-- **DatabaseTools.js** - MySQL/PostgreSQL operations
-- **S3Tools.js** - AWS S3 operations
-- **SystemTools.js** - System information
-- **AnalysisTools.js** - Code/file analysis
-- **ValidationHelper.js** - Input validation
+### Tools
+- **src/tools/**: Contains all tool implementations grouped by category
+- **src/tools/FileTools.js**: File operations (read, write, search, etc.)
+- **src/tools/S3Tools.js**: AWS S3 cloud storage operations
 
-### Web Interface
-- **Frontend**: HTML/CSS/JS in `public/` directory
-- **Backend**: Express + Socket.IO server
-- **Modular JS**: Organized in `modules/` for API, handlers, UI
+### Utilities
+- **src/Logger.js**: Comprehensive logging system
+- **src/DebugHelper.js**: Debugging utilities
 
-### Documentation
-Complete documentation available in `docs/` directory covering installation, usage, troubleshooting for both CLI and web interfaces.
+## Development Guidelines
+
+### Adding New AI Providers
+1. Create a new provider class in `src/AI/` extending `BaseAIProvider.js`
+2. Implement required methods: `sendRequest`, `parseResponse`
+3. Add the provider to `AIManager.js`
+4. Update documentation in `docs/AI_PROVIDERS.md`
+
+### Adding New Tools
+1. Add tool implementation to appropriate file in `src/tools/`
+2. Register the tool in `ToolCallHandler.js`
+3. Update documentation in `docs/TOOLS.md`
+
+### Logging Standards
+- Use appropriate log levels: `debug`, `info`, `warn`, `error`
+- Include context with all log entries
+- Log all API calls, tool executions, and errors
+
+## Future Development Areas
+
+- Enhanced multi-language support
+- Additional AI providers integration
+- Extended file analysis capabilities
+- Improved streaming performance
+- Advanced S3 operations
+- User authentication and permissions
+- Plugin system for custom tools
 
 ---
 
-*Updated for version 2.0.0 - Multi-provider AI CLI and Web Assistant*
+*This structure document was automatically generated and should be updated when significant changes are made to the project architecture.*
