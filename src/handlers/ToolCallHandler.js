@@ -16,13 +16,29 @@ export class ToolCallHandler {
         this.onToolExecution = handler;
     }
 
+    // Helper method untuk membuat tool call error
+    _createErrorToolCall(title, errorMessage, errorType, rawContent = '') {
+        return {
+            thinking: 'Error occurred during tool call extraction',
+            action: 'parsing_error',
+            parameters: {
+                error_type: errorType,
+                error_message: errorMessage,
+                title: title,
+                raw_content: rawContent
+            },
+            message: `Error: ${title} - ${errorMessage}`
+        };
+    }
+
     // Extract all tool calls from the response
     extractAllToolCalls(response) {
         try {
             // Pastikan response adalah string
             if (!response || typeof response !== 'string') {
                 console.error(chalk.red('❌ Invalid response format in extractAllToolCalls:'), typeof response);
-                return [];
+                // Buat tool call error khusus daripada return array kosong
+                return [this._createErrorToolCall('Invalid response format', `Expected string but got ${typeof response}`, 'format_error')];
             }
             
             const toolCalls = [];
@@ -101,9 +117,20 @@ export class ToolCallHandler {
                         toolCalls.push(toolCall);
 
                     } catch (jsonError) {
-                        // Blok catch Anda sudah bagus, tidak perlu diubah.
                         console.error(chalk.red(`❌ Error parsing parameters JSON for ${actionMatch[1]}:`), jsonError.message);
                         console.error(chalk.red('Raw parameters:'), parametersMatch[1]);
+                        
+                        // Buat tool call error untuk parameter parsing failure
+                        toolCalls.push({
+                            thinking: thinkingMatch ? thinkingMatch[1].trim() : 'Parameter parsing failed',
+                            action: `json_malformed`,
+                            parameters: {
+                                error: `Parameter parsing failed: ${jsonError.message}`,
+                                rawParameters: parametersMatch[1],
+                                originalAction: actionMatch[1]
+                            },
+                            message: messageMatch ? messageMatch[1].trim() : 'Failed to parse tool parameters'
+                        });
                         
                         // Log parsing error
                         if (this.logger) {
@@ -139,7 +166,13 @@ export class ToolCallHandler {
                 });
             }
             
-            return [];
+            // Buat tool call error khusus daripada return array kosong
+            return [this._createErrorToolCall(
+                'Tool call extraction failed',
+                `Error parsing tool calls: ${error.message}`,
+                'extraction_error',
+                response.substring(0, 500) // Kirim 500 karakter pertama dari respons untuk konteks
+            )];
         }
     }
 
@@ -162,10 +195,18 @@ export class ToolCallHandler {
         console.log(chalk.blue(`🔧 Executing: ${action} with parameters: ${JSON.stringify(parameters)}`));
         
         if (!this.availableTools[action]) {
-            const result = {
-                success: false,
-                error: `Unknown tool: ${action}. Available tools: ${Object.keys(this.availableTools).join(', ')}`
-            };
+            let result = {};
+            if(action == 'json_malformed'){
+                result = {
+                    success: false,
+                    error: parameters.error
+                };
+            }else{
+                result = {
+                    success: false,
+                    error: `Unknown tool: ${action}. Available tools: ${Object.keys(this.availableTools).join(', ')}`
+                };
+            }
             
             // Log the error
             if (this.logger) {
