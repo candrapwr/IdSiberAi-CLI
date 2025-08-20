@@ -24,7 +24,7 @@ export class ClaudeProvider extends BaseAIProvider {
         const request = {
             model: options.model || this.getDefaultModel(),
             max_tokens: 4000,
-            temperature: 0.7,
+            temperature: 0.2,
             messages: claudeMessages,
             stream: options.stream || false
         };
