@@ -28,3 +28,7 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--primary);
 }
+
+.text-muted {
+    color: var(--text-muted) !important;
+}

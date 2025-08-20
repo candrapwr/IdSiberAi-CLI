@@ -3,7 +3,7 @@
     background: rgba(30, 30, 30, 0.7);
     backdrop-filter: blur(var(--glass-blur));
     border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 1.5rem;
+    padding: 0.75rem;
     position: relative;
     box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.2);
 }
@@ -27,8 +27,8 @@
     background-color: transparent;
     border: none;
     color: var(--text-primary);
-    padding: 0.75rem 1rem;
-    min-height: 60px;
+    padding: 0.3rem;
+    min-height: 50px;
     max-height: 50px;
     resize: none;
     font-size: 1rem;
