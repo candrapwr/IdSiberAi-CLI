@@ -20,7 +20,7 @@ export class GrokProvider extends BaseAIProvider {
         const request = {
             model: options.model || this.getDefaultModel(),
             messages: this.normalizeMessages(messages),
-            temperature: 0.3,
+            temperature: 0.7,
             max_tokens: options.max_tokens || 10000,
             stream: options.stream || false,
             stream_options: options.stream ? {include_usage:true} : null

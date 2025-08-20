@@ -371,7 +371,7 @@ export class ContextOptimizer {
         // Pastikan kita tidak menghapus pesan terlalu banyak
         const safeGuard = (index) => {
             // Jangan hapus pesan sistem atau pesan sangat awal
-            if (index <= 1) { // Index 0 biasanya sistem prompt
+            if (index < 1) { // Index 0 biasanya sistem prompt
                 if (this.debug && this.debugLevel > 2) {
                     console.log(`[Context Optimizer] Safe guard: Not removing system message at index ${index}`);
                 }
