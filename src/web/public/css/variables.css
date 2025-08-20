@@ -1,0 +1,32 @@
+/* CSS Variables */
+:root {
+    --bg-dark: #0d0d0d;
+    --bg-darker: #050505;
+    --bg-card: rgba(30, 30, 30, 0.7);
+    --bg-card-hover: rgba(37, 37, 37, 0.8);
+    --bg-accent: rgba(39, 39, 39, 0.6);
+    --glass-blur: 12px;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-muted: #6c7293;
+    --border-color: #2d2d2d;
+    --primary: #6366f1;
+    --primary-hover: #818cf8;
+    --primary-dark: #4f46e5;
+    --secondary: #4b5563;
+    --success: #10b981;
+    --info: #3b82f6;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --purple: #8b5cf6;
+    --gradient-start: #6366f1;
+    --gradient-end: #8b5cf6;
+    --sidebar-width: 280px;
+    --mobile-sidebar-width: 100%;
+    --header-height: 64px;
+    --message-user-bg: #1e293b;
+    --message-assistant-bg: #1e2a4a;
+    --content-bg: #171717;
+    --code-bg: #1a1a1a;
+    --light-border: rgba(255, 255, 255, 0.1);
+}

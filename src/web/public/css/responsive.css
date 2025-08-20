@@ -1,0 +1,38 @@
+/* Responsive adjustments */
+@media (max-width: 991px) {
+    :root {
+        --sidebar-width: 240px;
+    }
+}
+
+@media (max-width: 767px) {
+    :root {
+        --sidebar-width: var(--mobile-sidebar-width);
+    }
+
+    .sidebar {
+        width: var(--mobile-sidebar-width);
+        transform: translateX(-100%);
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .welcome-message {
+        padding: 1.5rem;
+    }
+
+    .message {
+        max-width: 100%;
+    }
+
+    .message-assistant {
+        max-width: 100%;
+        width: 100%;
+    }
+}

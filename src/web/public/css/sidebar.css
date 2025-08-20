@@ -1,0 +1,100 @@
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    width: var(--sidebar-width);
+    overflow-y: auto;
+    transition: all 0.3s ease-in-out;
+    background: rgba(10, 10, 10, 0.7);
+    backdrop-filter: blur(var(--glass-blur));
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.5rem 1rem;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+}
+
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1.25rem;
+    background: linear-gradient(to right, var(--gradient-start), var(--gradient-end));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.sidebar-section {
+    margin-bottom: 1.5rem;
+    background: rgba(30, 30, 30, 0.4);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.sidebar-section:hover {
+    background: rgba(30, 30, 30, 0.6);
+    transform: translateY(-2px);
+}
+
+.sidebar-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Tool Categories */
+.tool-categories {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.tool-category {
+    margin-bottom: 12px;
+    background-color: var(--bg-card);
+    border-radius: 8px;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+}
+
+.tool-category-title {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.tool-list {
+    list-style-type: none;
+    padding-left: 5px;
+    margin-bottom: 5px;
+}
+
+.tool-list li {
+    font-size: 0.8rem;
+    padding: 3px 0;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+}
+
+.tool-list li:before {
+    content: "•";
+    color: var(--primary);
+    margin-right: 5px;
+}
