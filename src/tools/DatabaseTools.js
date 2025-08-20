@@ -36,10 +36,6 @@ export class DatabaseTools {
       }
     };
     this.pool = null;
-    
-    // Log info konfigurasi database saat inisialisasi
-    console.log(chalk.blue(`[DATABASE] Configuration initialized for ${this.dbType}`));
-    console.log(chalk.blue(`[DATABASE] Default database: ${this.config[this.dbType].database || 'Not set'}`));
   }
 
   async #validateConfig() {
