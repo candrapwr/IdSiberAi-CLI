@@ -742,6 +742,9 @@ class GeneralMCPCLI {
             'Database Operations': [
                 'execute_query'
             ],
+            'Internet Operations': [
+                'access_url'
+            ],
             'AI Management Operations': [
                 'switch_ai_provider', 'list_ai_providers', 'get_ai_provider_info', 'test_ai_providers'
             ],

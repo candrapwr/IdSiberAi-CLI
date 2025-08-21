@@ -65,6 +65,9 @@ MESSAGE: [brief action description]
 # DATABASE OPERATIONS TOOLS
 - execute_query(query, database): Execute SQL query with optional database parameter. If database is not provided, uses the default database from environment variables.
 
+# INTERNET OPERATIONS TOOLS
+- access_url(url): Access and retrieve content from the specified URL.
+
 # Response rules
 - Use proper tool call format for each action
 - Be direct and concise
