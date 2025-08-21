@@ -16,6 +16,7 @@
     "@aws-sdk/client-s3": "^3.490.0",
     "axios": "^1.6.0",
     "chalk": "^5.3.0",
+    "cheerio": "^1.0.0-rc.12",
     "inquirer": "^9.2.0",
     "glob": "^10.3.0",
     "dotenv": "^16.3.0",
