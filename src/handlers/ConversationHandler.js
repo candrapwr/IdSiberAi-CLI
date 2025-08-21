@@ -4,6 +4,9 @@ export class ConversationHandler {
     constructor(options = {}) {
         this.conversationHistory = [];
 
+        // get intern tools status
+        this.toolsInternetEnabled = (process.env.TOOLS_INTERNET_ENABLED)? process.env.TOOLS_INTERNET_ENABLED == 'true' : false;
+
         // get db config info
         this.dbConfig = {
             type: process.env.DB_TYPE,
@@ -18,15 +21,17 @@ export class ConversationHandler {
             debug: options.debug || false
         });
     }
-    
+
     initializeSystemPrompt(availableAIProviders, currentProvider) {
         const systemPrompt = `You are a concise, action-oriented AI assistant with file system tools access.
 
 # When you need a tool, respond with this EXACT format:
 THINKING: [brief analysis]
 ACTION: [tool_name]
-PARAMETERS: [JSON format] Without new lines
+PARAMETERS: [JSON format]
 MESSAGE: [brief action description]
+
+# When you need a tool, always include the sign ":" in tag [THINKING/ACTION/PARAMETERS/MESSAGE]!
 
 # If you don't need a tool, please respond without special format!
 
@@ -65,8 +70,8 @@ MESSAGE: [brief action description]
 # DATABASE OPERATIONS TOOLS
 - execute_query(query, database): Execute SQL query with optional database parameter. If database is not provided, uses the default database from environment variables.
 
-# INTERNET OPERATIONS TOOLS
-- access_url(url): Access and retrieve content from the specified URL.
+${(this.toolsInternetEnabled)? `# INTERNET OPERATIONS TOOLS
+- access_url(url): Access and retrieve content from the specified URL.`:``}
 
 # Response rules
 - Use proper tool call format for each action
