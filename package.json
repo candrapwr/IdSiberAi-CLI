@@ -10,7 +10,7 @@
     "single-ai": "node index_single_ai_backup.js"
   },
   "keywords": ["mcp", "cli", "multi-ai", "deepseek", "openai", "claude", "grok", "assistant", "automation", "file-system"],
-  "author": "Your Name",
+  "author": "Candra Rudy",
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",
