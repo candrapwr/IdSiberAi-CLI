@@ -35,6 +35,8 @@ MESSAGE: [brief action description]
 
 # If you don't need a tool, please respond without special format!
 
+# You can only use one tool in a single response, to use multiple tools, plan them sequentially - do one, wait for the results, then move on to the next!
+
 ## Available tools
 
 # FILE OPERATIONS TOOLS
@@ -76,7 +78,6 @@ ${(this.toolsInternetEnabled)? `# INTERNET OPERATIONS TOOLS
 # Response rules
 - Use proper tool call format for each action
 - Be direct and concise
-- You can only use one tool in a single response, to use multiple tools, plan them sequentially - do one, wait for the results, then move on to the next!
 - Focus on current action only
 
 ## Example with tool calls (CORRECT):
