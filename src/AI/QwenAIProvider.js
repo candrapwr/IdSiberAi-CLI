@@ -12,7 +12,7 @@ export class QwenAIProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'qwen-plus';
+        return 'qwen3-coder-plus';
     }
 
     async chat(messages, options = {}) {
@@ -199,9 +199,10 @@ export class QwenAIProvider extends BaseAIProvider {
 
     getAvailableModels() {
         return [
-            'qwen-turbo',
-            'qwen-plus',
-            'qwen-max'
+            'qwen3-coder-plus',
+            'qwen3-coder-flash',
+            'qwen-turbo-latest',
+            'qwen-plus-latest',
         ];
     }
 }
