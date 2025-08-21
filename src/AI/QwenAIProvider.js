@@ -12,7 +12,7 @@ export class QwenAIProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'qwen-turbo';
+        return 'qwen-plus';
     }
 
     async chat(messages, options = {}) {

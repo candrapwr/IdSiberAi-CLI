@@ -12,7 +12,7 @@ export class ZhiPuAIProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'glm-4-plus';
+        return 'glm-4.5-flash';
     }
 
     async chat(messages, options = {}) {
@@ -21,7 +21,7 @@ export class ZhiPuAIProvider extends BaseAIProvider {
             model: options.model || this.getDefaultModel(),
             messages: this.normalizeMessages(messages),
             temperature: 0.2,
-            max_tokens: options.max_tokens || 8000,
+            max_tokens: options.max_tokens || 20000,
             stream: options.stream || false
         };
 
