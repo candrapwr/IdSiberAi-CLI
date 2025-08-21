@@ -129,7 +129,7 @@ export function handleStreamChunk(data) {
         streamMessageDiv = document.createElement('div');
         streamMessageDiv.className = 'message message-assistant';
         streamMessageDiv.innerHTML = `
-            <div class="message-content"></div>
+            <div class="message-content"><pre><code class="code_respone"></code></pre></div>
             <div class="message-meta">
                 ${currentProvider ? `<span><i class="bi bi-cpu"></i> ${currentProvider}</span>` : ''}
             </div>
@@ -143,9 +143,8 @@ export function handleStreamChunk(data) {
             currentMessageContent += data.chunk;
             
             // Format and update the content
-            const contentDiv = streamMessageDiv.querySelector('.message-content');
-            console.log(currentMessageContent)
-            contentDiv.innerHTML = formatAssistantMessage(currentMessageContent);
+            const contentDiv = streamMessageDiv.querySelector('.code_respone');
+            contentDiv.innerHTML = formatAssistantMessage(currentMessageContent,true);
             
             // Apply syntax highlighting
             highlightCodeBlocks();

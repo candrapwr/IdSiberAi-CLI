@@ -3,7 +3,13 @@ import { ContextOptimizer } from '../contextManager/index.js';
 export class ConversationHandler {
     constructor(options = {}) {
         this.conversationHistory = [];
-        
+
+        // get db config info
+        this.dbConfig = {
+            type: process.env.DB_TYPE,
+            database: process.env.DB_NAME,
+        }
+
         // Initialize Context Optimizer
         this.contextOptimizer = new ContextOptimizer({
             enabled: options.enableContextOptimization !== false,
@@ -19,7 +25,7 @@ export class ConversationHandler {
 # When you need a tool, respond with this EXACT format:
 THINKING: [brief analysis]
 ACTION: [tool_name]
-PARAMETERS: [JSON format]
+PARAMETERS: [JSON format] Without new lines
 MESSAGE: [brief action description]
 
 # If you don't need a tool, please respond without special format!
@@ -59,11 +65,6 @@ MESSAGE: [brief action description]
 # DATABASE OPERATIONS TOOLS
 - execute_query(query, database): Execute SQL query with optional database parameter. If database is not provided, uses the default database from environment variables.
 
-# Database Connection Information
-This system is connected to a database with the following configuration:
-- When using database tools, you can override the default database by providing the 'database' parameter
-- For multiple databases, specify the database name in the query parameter
-
 # Response rules
 - Use proper tool call format for each action
 - Be direct and concise
@@ -82,27 +83,17 @@ ACTION: edit_file
 PARAMETERS: {"file_path": "src/utils.js", "edits": [{"oldText": "function oldName() {", "newText": "function newName() {"}]}
 MESSAGE: Updating function name in utils.js...
 
-## Example of database operations:
-THINKING: Need to query users from the default database
-ACTION: execute_query
-PARAMETERS: {"query": "SELECT * FROM users LIMIT 10"}
-MESSAGE: Fetching user data from default database...
-
-## Example of database operations with specific database:
-THINKING: Need to query products from a specific database
-ACTION: execute_query
-PARAMETERS: {"query": "SELECT * FROM products LIMIT 5", "database": "ecommerce_db"}
-MESSAGE: Fetching product data from ecommerce_db database...
-
 ## Example without tools (CORRECT):
 Please, what can I help you with....
 
-## Task: Execute user requests efficiently and follow database connection guidelines`;
+## The following is configuration information for the database name and database type on this system:
+${JSON.stringify(this.dbConfig)}
+
+## Task: Execute user requests efficiently`;
 
         this.conversationHistory = [
             { role: 'system', content: systemPrompt }
         ];
-        
         return this.conversationHistory;
     }
     
