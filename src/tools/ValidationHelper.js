@@ -4,15 +4,41 @@ import path from 'path';
 export class ValidationHelper {
     constructor(workingDirectory) {
         this.workingDirectory = workingDirectory;
+        this.restrictToWorkingDirectory = false; // Set to true to restrict to working directory only
+    }
+    
+    setWorkingDirectory(newDirectory) {
+        this.workingDirectory = newDirectory;
+        return this.workingDirectory;
+    }
+    
+    setRestriction(restrict) {
+        this.restrictToWorkingDirectory = restrict;
+        return this.restrictToWorkingDirectory;
     }
 
     async validatePath(filePath) {
         // Check if path is absolute or trying to escape working directory
         const normalizedPath = path.normalize(filePath);
-        const resolvedPath = path.resolve(normalizedPath);
+        let resolvedPath;
         
-        if (!resolvedPath.startsWith(this.workingDirectory)) {
+        // Handle absolute paths
+        if (path.isAbsolute(normalizedPath)) {
+            // For absolute paths, use it directly
+            resolvedPath = normalizedPath;
+        } else {
+            // For relative paths, resolve against working directory
+            resolvedPath = path.resolve(this.workingDirectory, normalizedPath);
+        }
+        
+        // Make sure we're still within safe boundaries if restriction is enabled
+        if (this.restrictToWorkingDirectory && !resolvedPath.startsWith(this.workingDirectory)) {
             throw new Error(`Path outside working directory not allowed: ${filePath}`);
+        }
+        
+        // Basic safety check that path is valid
+        if (!resolvedPath.startsWith('/')) {
+            throw new Error(`Invalid path: ${filePath}`);
         }
         
         return resolvedPath;

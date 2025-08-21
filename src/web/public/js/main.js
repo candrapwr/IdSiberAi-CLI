@@ -1,7 +1,7 @@
 // Main application file
 import { setupSocketListeners, displayConversationHistory } from './modules/handlers.js';
 import { initializeTheme, setupDOMEventHandlers } from './modules/ui.js';
-import { fetchConversationHistory, showStats, testProviders } from './modules/api.js';
+import { fetchConversationHistory, showStats, testProviders, showWorkingDirectoryModal } from './modules/api.js';
 
 // Set up global variables
 const socket = io();
@@ -49,5 +49,11 @@ function setupAdditionalHandlers() {
     const testProvidersBtn = document.getElementById('testProvidersBtn');
     if (testProvidersBtn) {
         testProvidersBtn.addEventListener('click', testProviders);
+    }
+    
+    // Working directory button
+    const workDirBtn = document.getElementById('workDirBtn');
+    if (workDirBtn) {
+        workDirBtn.addEventListener('click', showWorkingDirectoryModal);
     }
 }

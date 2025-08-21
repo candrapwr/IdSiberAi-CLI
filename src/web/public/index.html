@@ -63,6 +63,9 @@
                 
                 <div class="sidebar-section mt-auto">
                     <div class="d-grid gap-2">
+                        <button class="btn btn-outline-info btn-sm" id="workDirBtn">
+                            <i class="bi bi-folder me-2"></i>Working Directory
+                        </button>
                         <button class="btn btn-outline-danger btn-sm" id="clearHistoryBtn">
                             <i class="bi bi-trash me-2"></i>Clear History
                         </button>
@@ -114,6 +117,70 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Working Directory modal -->
+    <div class="modal fade" id="workDirModal" tabindex="-1" aria-labelledby="workDirModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="workDirModalLabel">
+                        <i class="bi bi-folder me-2"></i>Working Directory
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Current Working Directory:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="currentWorkDir" readonly>
+                            <button class="btn btn-outline-secondary" type="button" id="refreshWorkDirBtn">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Directory Browser -->
+                    <div class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-folder-fill me-2"></i>
+                                <span id="currentBrowserPath">Directory Browser</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="parentDirBtn">
+                                <i class="bi bi-arrow-up"></i> Parent Directory
+                            </button>
+                        </div>
+                        <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
+                            <div class="list-group list-group-flush" id="directoryList">
+                                <div class="list-group-item text-center">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span class="ms-2">Loading directories...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="text-muted small">Click on a directory to navigate into it</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newWorkDir" class="form-label">New Working Directory:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newWorkDir" placeholder="Enter new directory path">
+                            <button class="btn btn-primary" type="button" id="changeWorkDirBtn">Change</button>
+                        </div>
+                        <div class="form-text">Enter absolute path or relative to current directory</div>
+                    </div>
+                    <div id="workDirResult" class="alert d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>

@@ -26,6 +26,12 @@ export class S3Tools {
     this.workingDirectory = workingDirectory;
     this.validator = new ValidationHelper(workingDirectory);
   }
+  
+  setWorkingDirectory(newDirectory) {
+    this.workingDirectory = newDirectory;
+    this.validator.setWorkingDirectory(newDirectory);
+    return this.workingDirectory;
+  }
 
   /**
    * Upload file to S3 bucket

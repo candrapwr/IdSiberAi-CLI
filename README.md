@@ -12,6 +12,7 @@
 - 🔄 **Provider Switching** - Switch AI providers on the fly
 - 🛡️ **Auto Fallback** - Automatic provider switching on failures
 - 🌐 **Dual Interface** - Choose between CLI and Web interfaces
+- 📂 **Directory Navigation** - Visual directory browser & flexible path handling
 - ☁️ **Cloud Storage** - Integrated S3 operations (AWS SDK v3)
 - 🗄️ **Database Operations** - MySQL, PostgreSQL, SQLite database management
 - 🛠️ **25+ Tools** - File ops, analysis, system automation, S3, database

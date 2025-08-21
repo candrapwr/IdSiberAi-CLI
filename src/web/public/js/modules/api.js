@@ -312,3 +312,198 @@ export function displayProviderTests(data) {
     
     modalBody.innerHTML = testsHtml;
 }
+
+// Get working directory
+export function getWorkingDirectory() {
+    return fetch('/api/working-directory')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                return data.directory;
+            } else {
+                throw new Error(data.error || 'Failed to get working directory');
+            }
+        });
+}
+
+// Change working directory
+export function changeWorkingDirectory(directory) {
+    return fetch('/api/change-working-directory', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ directory })
+    })
+    .then(response => response.json());
+}
+
+// Get list of directories
+export function getDirectoryList(path = '') {
+    // For empty paths, just request root
+    if (!path) {
+        return fetch('/api/list-directories')
+            .then(response => response.json());
+    }
+    
+    // For absolute paths that would already contain the working directory,
+    // we need to use them directly
+    const queryParams = `?path=${encodeURIComponent(path)}`;
+    return fetch(`/api/list-directories${queryParams}`)
+        .then(response => response.json());
+}
+
+// Show working directory modal
+export function showWorkingDirectoryModal() {
+    // Show modal
+    const workDirModal = bootstrap.Modal.getInstance(document.getElementById('workDirModal')) || 
+                         new bootstrap.Modal(document.getElementById('workDirModal'));
+    workDirModal.show();
+    
+    // Get current working directory
+    getWorkingDirectory()
+        .then(directory => {
+            document.getElementById('currentWorkDir').value = directory;
+            document.getElementById('newWorkDir').value = directory;
+            // Hide any previous results
+            const resultEl = document.getElementById('workDirResult');
+            resultEl.classList.add('d-none');
+            
+            // Load directory list
+            loadDirectoryList(directory);
+        })
+        .catch(error => {
+            // Show error
+            const resultEl = document.getElementById('workDirResult');
+            resultEl.textContent = `Error: ${error.message}`;
+            resultEl.classList.remove('d-none', 'alert-success');
+            resultEl.classList.add('alert-danger');
+        });
+}
+
+// Load directory list
+export function loadDirectoryList(path = '') {
+    const directoryList = document.getElementById('directoryList');
+    const currentBrowserPath = document.getElementById('currentBrowserPath');
+    
+    // Show loading
+    directoryList.innerHTML = `
+        <div class="list-group-item text-center">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <span class="ms-2">Loading directories...</span>
+        </div>
+    `;
+    
+    // For debugging
+    console.log(`Loading directory: '${path}'`);
+    
+    // Update path display - show simplified path
+    const displayPath = path || 'Root Directory';
+    currentBrowserPath.textContent = displayPath;
+    
+    // Load directories
+    getDirectoryList(path)
+        .then(result => {
+            if (result.success) {
+                // Store the working directory in a data attribute for easier reference
+                if (result.absoluteWorkingDir) {
+                    currentBrowserPath.dataset.workingDir = result.absoluteWorkingDir;
+                    console.log(`Stored working directory: ${result.absoluteWorkingDir}`);
+                }
+                
+                // Update path display with actual result path
+                const displayPath = result.path === '.' ? 'Root Directory' : result.path;
+                currentBrowserPath.textContent = displayPath;
+                
+                // For debugging
+                console.log(`Directory listing successful:`);
+                console.log(`- Request path: '${result.requestPath}'`);
+                console.log(`- Working directory: '${result.absoluteWorkingDir}'`);
+                console.log(`- Normalized path: '${result.path}'`);
+                console.log(`- Directories found: ${result.count}`);
+                
+                // Update directory list with the working directory context
+                renderDirectoryList(result.directories, result.path, result.absoluteWorkingDir);
+            } else {
+                // Show error
+                directoryList.innerHTML = `
+                    <div class="list-group-item text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error: ${result.error}
+                    </div>
+                `;
+                console.error(`Error listing directory: ${result.error}`);
+                
+                // On error, clear the stored working directory to avoid issues
+                if (currentBrowserPath.dataset.workingDir) {
+                    console.log(`Clearing stored working directory due to error`);
+                    delete currentBrowserPath.dataset.workingDir;
+                }
+            }
+        })
+        .catch(error => {
+            // Show error
+            directoryList.innerHTML = `
+                <div class="list-group-item text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Error: ${error.message}
+                </div>
+            `;
+            console.error(`Error in API call: ${error.message}`);
+        });
+}
+
+// Render directory list
+function renderDirectoryList(directories, currentPath, workingDir) {
+    const directoryList = document.getElementById('directoryList');
+    
+    if (directories.length === 0) {
+        directoryList.innerHTML = `
+            <div class="list-group-item text-muted">
+                <i class="bi bi-info-circle me-2"></i>
+                No subdirectories found
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort directories alphabetically
+    directories.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Create directory items
+    let html = '';
+    directories.forEach(dir => {
+        // Construct path safely - always use relative paths
+        let dirPath;
+        if (currentPath === '.' || currentPath === '') {
+            // We're at the root of the working directory
+            dirPath = dir.name;
+        } else {
+            // We're in a subdirectory - make sure to not duplicate path separators
+            dirPath = `${currentPath}${currentPath.endsWith('/') ? '' : '/'}${dir.name}`;
+        }
+        
+        html += `
+            <button type="button" class="list-group-item list-group-item-action directory-item" data-path="${dirPath}">
+                <i class="bi bi-folder me-2"></i>${dir.name}
+                <div class="small text-muted">
+                    <i class="bi bi-clock me-1"></i>${new Date(dir.lastModified).toLocaleString()}
+                </div>
+            </button>
+        `;
+    });
+    
+    directoryList.innerHTML = html;
+    
+    // Add click event to directory items
+    document.querySelectorAll('.directory-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const path = item.dataset.path;
+            // Update both input and navigate
+            document.getElementById('newWorkDir').value = path;
+            loadDirectoryList(path);
+        });
+    });
+}

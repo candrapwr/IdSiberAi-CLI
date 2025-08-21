@@ -11,6 +11,12 @@ export class SystemTools {
             'sudo'
         ];
     }
+    
+    setWorkingDirectory(newDirectory) {
+        this.workingDirectory = newDirectory;
+        this.validator.setWorkingDirectory(newDirectory);
+        return this.workingDirectory;
+    }
 
     async executeCommand(command, options = {}) {
         try {

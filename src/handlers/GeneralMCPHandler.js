@@ -7,6 +7,8 @@ import { ToolCallHandler } from './ToolCallHandler.js';
 import { LoggingHandler } from './LoggingHandler.js';
 import { RequestHandler } from './RequestHandler.js';
 import crypto from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
 
 export class GeneralMCPHandler {
     constructor(apiKeys, workingDirectory, maxIterations = 15, options = {}) {
@@ -329,6 +331,51 @@ export class GeneralMCPHandler {
         return Object.keys(this.availableTools);
     }
 
+    // Working directory management
+    async changeWorkingDirectory(newDirectory) {
+        try {
+            // Validate directory exists
+            const resolvedPath = path.resolve(newDirectory);
+            
+            try {
+                const stats = await fs.stat(resolvedPath);
+                if (!stats.isDirectory()) {
+                    return {
+                        success: false,
+                        error: `Path is not a directory: ${resolvedPath}`
+                    };
+                }
+            } catch (error) {
+                if (error.code === 'ENOENT') {
+                    return {
+                        success: false,
+                        error: `Directory does not exist: ${resolvedPath}`
+                    };
+                } else {
+                    throw error;
+                }
+            }
+            
+            // Update working directory in tools
+            this.tools.setWorkingDirectory(resolvedPath);
+            
+            return {
+                success: true,
+                message: `Working directory changed to: ${resolvedPath}`,
+                directory: resolvedPath
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: `Failed to change working directory: ${error.message}`
+            };
+        }
+    }
+    
+    getWorkingDirectory() {
+        return this.tools.getWorkingDirectory();
+    }
+    
     // Session information
     getSessionInfo() {
         const aiInfo = this.aiManager.getProvidersInfo();
@@ -345,7 +392,8 @@ export class GeneralMCPHandler {
             currentAIProvider: this.aiManager.currentProvider,
             availableAIProviders: this.aiManager.getAvailableProviders(),
             aiProvidersInfo: aiInfo,
-            contextOptimization: contextOptimizerStatus
+            contextOptimization: contextOptimizerStatus,
+            workingDirectory: this.tools.getWorkingDirectory()
         };
     }
 }
