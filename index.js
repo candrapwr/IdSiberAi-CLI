@@ -4,6 +4,10 @@ import { GeneralMCPHandler } from './src/handlers/GeneralMCPHandler.js';
 import { WebServer } from './src/web/web_server.js';
 import dotenv from 'dotenv';
 import path from 'path';
+import boxen from 'boxen';
+import gradient from 'gradient-string';
+import figlet from 'figlet';
+
 
 // Load environment variables
 dotenv.config();
@@ -17,9 +21,6 @@ class GeneralMCPCLI {
     }
 
     async initialize() {
-        console.log(chalk.blue.bold('🚀 IdSiberAi Assistant CLI - Multi-AI Edition'));
-        console.log(chalk.gray('='.repeat(70)));
-        
         // Use the shared initialize function
         this.mcp = await initializeMCPHandler();
         
@@ -31,14 +32,6 @@ class GeneralMCPCLI {
         // Configure stream mode
         this.streamMode = process.env.ENABLE_STREAMING === 'true';
         this.mcp.setStreamMode(this.streamMode, this.handleStreamChunk.bind(this));
-        
-        console.log(chalk.gray(`Logging: ${process.env.ENABLE_LOGGING === 'true' ? '✅ Enabled' : '❌ Disabled'}`));
-        console.log(chalk.gray(`Stream Mode: ${this.streamMode ? '✅ Enabled' : '❌ Disabled'}`));
-        console.log(chalk.gray(`AI Fallback: ${process.env.ENABLE_AI_FALLBACK === 'true' ? '✅ Enabled' : '❌ Disabled'}`));
-        
-        const sessionInfo = this.mcp.getSessionInfo();
-        console.log(chalk.gray(`Session ID: ${sessionInfo.sessionId}`));
-        console.log(chalk.gray('='.repeat(70)));
         
         return true;
     }
@@ -58,11 +51,22 @@ class GeneralMCPCLI {
     async startChat() {
         this.isRunning = true;
         
-        console.log(chalk.green.bold('\n💬 Chat Mode Started - Multi-AI Edition'));
-        console.log(chalk.gray('Ask me anything! I can help with files, code, automation, and more.'));
-        console.log(chalk.gray('New AI Commands: /ai, /switch, /test, /providers'));
-        console.log(chalk.gray('Other Commands: /help, /tools, /logs, /stream, /stats, /clear, /history, /exit'));
-        console.log(chalk.gray('-'.repeat(70)));
+        // Display chat mode welcome message with better formatting
+        const chatWelcome = boxen(
+            `${chalk.green.bold('💬 CHAT MODE ACTIVATED')}\n\n` +
+            `${chalk.cyan('Ask me anything!')} I can help with ${chalk.yellow('files')}, ${chalk.yellow('code')}, ${chalk.yellow('automation')}, and more.\n\n` +
+            `${chalk.magenta.bold('AI Commands:')} ${chalk.magenta('/ai')}, ${chalk.magenta('/switch')}, ${chalk.magenta('/test')}, ${chalk.magenta('/providers')}\n` +
+            `${chalk.blue.bold('Other Commands:')} ${chalk.blue('/help')}, ${chalk.blue('/tools')}, ${chalk.blue('/logs')}, ${chalk.blue('/stream')}, ${chalk.blue('/stats')}, ${chalk.blue('/clear')}, ${chalk.blue('/history')}, ${chalk.blue('/exit')}`,
+            {
+                padding: 1,
+                margin: { top: 1, bottom: 1 },
+                borderStyle: 'round',
+                borderColor: 'green',
+                backgroundColor: '#111'
+            }
+        );
+        
+        console.log(chatWelcome);
 
         while (this.isRunning) {
             try {
@@ -885,28 +889,75 @@ class GeneralMCPCLI {
     }
 }
 
+// Display welcome banner
+function displayWelcomeBanner() {
+    // Create ASCII art title with gradient colors
+    const title = figlet.textSync('IdSiberAi', {
+        font: 'Standard',
+        horizontalLayout: 'full'
+    });
+    
+    // Apply gradient colors to title
+    const titleGradient = gradient(['#00c6ff', '#0072ff', '#00c6ff']).multiline(title);
+    
+    // Create subtitle
+    const subtitle = ' Terminal & CLI - Multi-Provider AI Assistant ';
+    
+    // Create version and author info
+    const version = '  v2.2.0  ';
+    const author = ' by DataSiber Technology ';
+    
+    // Create boxed welcome message
+    const welcomeBox = boxen(
+        `${titleGradient}\n\n${chalk.bold(subtitle)}\n\n` +
+        `${chalk.cyan('•')} 7 AI Models ${chalk.gray('|')} ${chalk.cyan('•')} 25+ Tools ${chalk.gray('|')} ${chalk.cyan('•')} Dual Interface\n\n` +
+        `${chalk.bgBlue(version)}${chalk.gray(author)}`,
+        {
+            padding: 1,
+            margin: 1,
+            borderStyle: 'round',
+            borderColor: 'blue',
+            backgroundColor: '#111'
+        }
+    );
+    
+    console.log(welcomeBox);
+}
+
 // Main execution
 async function main() {
-    console.log(chalk.blue.bold('🚀 Multi-AI CLI with Web Interface'));
-    console.log(chalk.gray('AI-Powered File System & Automation Assistant with Multiple AI Providers'));
+    // Display welcome banner
+    displayWelcomeBanner();
+    
     console.log(chalk.gray('='.repeat(70)));
     
-    // Ask user for mode selection
+    // Ask user for mode selection with stylish prompt
+    console.log(chalk.cyan.bold('\n🔹 SELECT INTERFACE MODE'));
+    
+    const modeChoices = [
+        {
+            name: `${chalk.bold.green('💻 CLI Mode')} - ${chalk.gray('Native Terminal Experience')}`,
+            value: 'cli'
+        },
+        {
+            name: `${chalk.bold.blue('🌐 Web Mode')} - ${chalk.gray('Browser-based Dashboard')}`,
+            value: 'web'
+        }
+    ];
+    
     const { mode } = await inquirer.prompt([
         {
             type: 'list',
             name: 'mode',
-            message: 'Select application mode:',
-            choices: [
-                { name: 'CLI Mode - Command Line Interface', value: 'cli' },
-                { name: 'IdSiberAi Terminal - Web Browser Interface', value: 'web' }
-            ],
+            message: 'Which interface would you like to use?',
+            choices: modeChoices,
+            prefix: '🔹',
             default: 'cli'
         }
     ]);
     
     if (mode === 'cli') {
-        // Initialize CLI mode
+        
         const cli = new GeneralMCPCLI();
         const initialized = await cli.initialize();
         
@@ -915,8 +966,10 @@ async function main() {
             await cli.startChat();
         }
     } else {
-        // Initialize Web mode
-        console.log(chalk.yellow('Initializing IdSiberAi Terminal web interface...'));
+        // Initialize Web mode with nice loading effect
+        console.log();
+        console.log(chalk.blue.bold('🌐 WEB MODE SELECTED'));
+        console.log(chalk.gray('Initializing IdSiberAi Terminal web interface...'));
         
         try {
             // Get web server port from environment or use default

@@ -101,7 +101,7 @@ export class WebServer {
                 
                 // Call the list directory method with the raw path
                 // The DirectoryTools class will handle joining with working directory
-                const result = await this.mcpHandler.tools.listDirectory(requestPath);
+                const result = await this.mcpHandler.tools.listDirectory(requestPath,true);
                 
                 if (result.success) {
                     // Filter only directories

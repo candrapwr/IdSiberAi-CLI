@@ -83,8 +83,8 @@ export class GeneralTools {
     }
 
     // Directory Operations
-    async listDirectory(dirPath) {
-        return await this.directoryTools.listDirectory(dirPath);
+    async listDirectory(dirPath,changeMode) {
+        return await this.directoryTools.listDirectory(dirPath,changeMode);
     }
 
     async createDirectory(dirPath) {
