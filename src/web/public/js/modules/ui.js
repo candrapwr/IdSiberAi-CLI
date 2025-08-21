@@ -199,6 +199,170 @@ export function setupDOMEventHandlers(socket) {
         });
     }
     
+    // Working directory button
+    const workDirBtn = document.getElementById('workDirBtn');
+    if (workDirBtn) {
+        workDirBtn.addEventListener('click', () => {
+            import('./api.js').then(module => {
+                module.showWorkingDirectoryModal();
+            });
+        });
+    }
+    
+    // Refresh working directory button
+    const refreshWorkDirBtn = document.getElementById('refreshWorkDirBtn');
+    if (refreshWorkDirBtn) {
+        refreshWorkDirBtn.addEventListener('click', () => {
+            import('./api.js').then(module => {
+                module.getWorkingDirectory()
+                    .then(directory => {
+                        document.getElementById('currentWorkDir').value = directory;
+                        // Hide any previous results
+                        const resultEl = document.getElementById('workDirResult');
+                        resultEl.classList.add('d-none');
+                        
+                        // Reload directory list
+                        module.loadDirectoryList(directory);
+                    })
+                    .catch(error => {
+                        // Show error
+                        const resultEl = document.getElementById('workDirResult');
+                        resultEl.textContent = `Error: ${error.message}`;
+                        resultEl.classList.remove('d-none', 'alert-success');
+                        resultEl.classList.add('alert-danger');
+                    });
+            });
+        });
+    }
+    
+    // Parent directory button
+    const parentDirBtn = document.getElementById('parentDirBtn');
+    if (parentDirBtn) {
+        parentDirBtn.addEventListener('click', () => {
+            try {
+                // Get the current path and working directory
+                const currentBrowserPath = document.getElementById('currentBrowserPath');
+                const workingDir = currentBrowserPath?.dataset?.workingDir || '';
+                
+                console.log(`Current working directory: ${workingDir}`);
+                
+                // Get current path from input
+                let currentPath = document.getElementById('newWorkDir').value;
+                console.log(`Current path before processing: ${currentPath}`);
+                
+                // If no path, we're already at root
+                if (!currentPath) {
+                    console.log('Already at root, nothing to do');
+                    return;
+                }
+                
+                // Handle special case: if currentPath is the working directory itself
+                if (currentPath === workingDir) {
+                    console.log('At working directory, navigating to parent...');
+                    
+                    // Get parent of working directory
+                    const pathParts = workingDir.split('/');
+                    // Remove last part
+                    pathParts.pop();
+                    const parentPath = pathParts.join('/');
+                    
+                    // Update input and load
+                    document.getElementById('newWorkDir').value = parentPath;
+                    console.log(`Navigating to parent of working directory: ${parentPath}`);
+                    
+                    import('./api.js').then(module => {
+                        module.loadDirectoryList(parentPath);
+                    });
+                    return;
+                }
+                
+                // Use Node.js path module logic to get parent directory
+                // First normalize path (replace backslashes with forward slashes)
+                currentPath = currentPath.replace(/\\/g, '/');
+                
+                // Remove trailing slash if exists
+                if (currentPath.endsWith('/')) {
+                    currentPath = currentPath.slice(0, -1);
+                }
+                
+                // Get the parent directory path
+                const lastSlashIndex = currentPath.lastIndexOf('/');
+                
+                let parentPath;
+                if (lastSlashIndex === -1) {
+                    // No slashes, already at root of current context
+                    parentPath = '';
+                } else if (lastSlashIndex === 0) {
+                    // Root directory
+                    parentPath = '/';
+                } else {
+                    // Normal case: get parent path
+                    parentPath = currentPath.substring(0, lastSlashIndex);
+                }
+                
+                console.log(`Calculated parent path: ${parentPath}`);
+                
+                // Update input and load
+                document.getElementById('newWorkDir').value = parentPath;
+                import('./api.js').then(module => {
+                    module.loadDirectoryList(parentPath);
+                });
+            } catch (error) {
+                console.error(`Error navigating to parent directory: ${error.message}`);
+                alert(`Error navigating to parent directory: ${error.message}`);
+            }
+        });
+    }
+    
+    // Change working directory button
+    const changeWorkDirBtn = document.getElementById('changeWorkDirBtn');
+    if (changeWorkDirBtn) {
+        changeWorkDirBtn.addEventListener('click', () => {
+            const newDirectory = document.getElementById('newWorkDir').value;
+            if (!newDirectory) {
+                alert('Please enter a directory path');
+                return;
+            }
+            
+            // Show loading state
+            changeWorkDirBtn.disabled = true;
+            changeWorkDirBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Changing...';
+            
+            import('./api.js').then(module => {
+                module.changeWorkingDirectory(newDirectory)
+                    .then(result => {
+                        // Reset button
+                        changeWorkDirBtn.disabled = false;
+                        changeWorkDirBtn.innerHTML = 'Change';
+                        
+                        // Show result
+                        const resultEl = document.getElementById('workDirResult');
+                        if (result.success) {
+                            document.getElementById('currentWorkDir').value = result.directory;
+                            resultEl.textContent = result.message;
+                            resultEl.classList.remove('d-none', 'alert-danger');
+                            resultEl.classList.add('alert-success');
+                        } else {
+                            resultEl.textContent = `Error: ${result.error}`;
+                            resultEl.classList.remove('d-none', 'alert-success');
+                            resultEl.classList.add('alert-danger');
+                        }
+                    })
+                    .catch(error => {
+                        // Reset button
+                        changeWorkDirBtn.disabled = false;
+                        changeWorkDirBtn.innerHTML = 'Change';
+                        
+                        // Show error
+                        const resultEl = document.getElementById('workDirResult');
+                        resultEl.textContent = `Error: ${error.message}`;
+                        resultEl.classList.remove('d-none', 'alert-success');
+                        resultEl.classList.add('alert-danger');
+                    });
+            });
+        });
+    }
+    
     // Toggle sidebar button
     const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
     if (toggleSidebarBtn) {

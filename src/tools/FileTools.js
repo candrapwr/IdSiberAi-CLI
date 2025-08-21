@@ -8,6 +8,12 @@ export class FileTools {
         this.workingDirectory = workingDirectory;
         this.validator = new ValidationHelper(workingDirectory);
     }
+    
+    setWorkingDirectory(newDirectory) {
+        this.workingDirectory = newDirectory;
+        this.validator.setWorkingDirectory(newDirectory);
+        return this.workingDirectory;
+    }
 
     async searchFiles(pattern, directory = '') {
         try {

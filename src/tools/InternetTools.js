@@ -10,6 +10,12 @@ export class InternetTools {
         this.allowedDomains = []; // Optional: bisa diisi dengan domain yang diizinkan
         this.blockedDomains = []; // Optional: bisa diisi dengan domain yang diblokir
     }
+    
+    setWorkingDirectory(newDirectory) {
+        this.workingDirectory = newDirectory;
+        this.validator.setWorkingDirectory(newDirectory);
+        return this.workingDirectory;
+    }
 
     async accessUrl(url, options = {}) {
         // Auto-extract content option (default: true)

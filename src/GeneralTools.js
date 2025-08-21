@@ -24,6 +24,25 @@ export class GeneralTools {
         this.internetTools = new InternetTools(workingDirectory);
         this.dbTools = new DatabaseTools;
     }
+    
+    // Working directory management
+    getWorkingDirectory() {
+        return this.workingDirectory;
+    }
+    
+    setWorkingDirectory(newDirectory) {
+        this.workingDirectory = newDirectory;
+        
+        // Update working directory in all tool classes
+        this.fileTools.setWorkingDirectory(newDirectory);
+        this.directoryTools.setWorkingDirectory(newDirectory);
+        this.analysisTools.setWorkingDirectory(newDirectory);
+        this.systemTools.setWorkingDirectory(newDirectory);
+        this.s3Tools.setWorkingDirectory(newDirectory);
+        this.internetTools.setWorkingDirectory(newDirectory);
+        
+        return this.workingDirectory;
+    }
 
     // File System Operations
     async searchFiles(pattern, directory) {

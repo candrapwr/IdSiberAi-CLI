@@ -86,6 +86,58 @@ export class WebServer {
             const result = await this.mcpHandler.testAIProviders();
             res.json(result);
         });
+        
+        // API route to get working directory
+        this.app.get('/api/working-directory', (req, res) => {
+            const directory = this.mcpHandler.getWorkingDirectory();
+            res.json({ success: true, directory });
+        });
+        
+        // API route to list directories
+        this.app.get('/api/list-directories', async (req, res) => {
+            try {
+                // Get path parameter - either use the provided path or empty string for root
+                const requestPath = req.query.path || '';
+                
+                // Call the list directory method with the raw path
+                // The DirectoryTools class will handle joining with working directory
+                const result = await this.mcpHandler.tools.listDirectory(requestPath);
+                
+                if (result.success) {
+                    // Filter only directories
+                    const directories = result.entries.filter(entry => entry.type === 'directory');
+                    
+                    // Return clean path information
+                    res.json({
+                        success: true,
+                        path: result.path, // This will be the normalized path
+                        absoluteWorkingDir: this.mcpHandler.getWorkingDirectory(),
+                        requestPath: requestPath,
+                        directories: directories,
+                        count: directories.length
+                    });
+                } else {
+                    console.log(`ERROR: ${result.error}`);
+                    console.log('----------------------------------------');
+                    res.status(400).json({ success: false, error: result.error });
+                }
+            } catch (error) {
+                console.error(`SERVER ERROR: ${error.message}`);
+                console.log('----------------------------------------');
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+        
+        // API route to change working directory
+        this.app.post('/api/change-working-directory', async (req, res) => {
+            const { directory } = req.body;
+            if (!directory) {
+                return res.status(400).json({ success: false, error: 'Directory path is required' });
+            }
+            
+            const result = await this.mcpHandler.changeWorkingDirectory(directory);
+            res.json(result);
+        });
     }
     
     setupSocketIO() {
@@ -175,14 +227,19 @@ export class WebServer {
                             break;
                             
                         case 'get-stats':
-                            result = await this.mcpHandler.getAPIUsage();
-                            break;
-                            
-                        default:
-                            result = { 
-                                success: false, 
-                                error: `Unknown command: ${command}` 
-                            };
+                        result = await this.mcpHandler.getAPIUsage();
+                        break;
+                        
+                        case 'get-working-directory':
+                            const directory = this.mcpHandler.getWorkingDirectory();
+                            result = { success: true, directory };
+                        break;
+                        
+                    default:
+                        result = { 
+                            success: false, 
+                            error: `Unknown command: ${command}` 
+                        };
                     }
                     
                     socket.emit('command-result', {
@@ -213,6 +270,24 @@ export class WebServer {
                     socket.emit('session-info', this.mcpHandler.getSessionInfo());
                 } catch (error) {
                     socket.emit('provider-switched', {
+                        success: false,
+                        error: error.message
+                    });
+                }
+            });
+            
+            // Handle working directory change
+            socket.on('change-working-directory', async (data) => {
+                const { directory } = data;
+                
+                try {
+                    const result = await this.mcpHandler.changeWorkingDirectory(directory);
+                    socket.emit('working-directory-changed', result);
+                    
+                    // Send updated session info
+                    socket.emit('session-info', this.mcpHandler.getSessionInfo());
+                } catch (error) {
+                    socket.emit('working-directory-changed', {
                         success: false,
                         error: error.message
                     });

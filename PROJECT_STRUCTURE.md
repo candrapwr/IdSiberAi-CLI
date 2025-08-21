@@ -112,14 +112,23 @@ IdSiberAi-CLI/
 - **AnalysisTools.js** - Code/file analysis
 - **ValidationHelper.js** - Input validation
 
+### Working Directory Management
+- **CLI Interface**: `/workdir` command for navigating and changing working directory
+- **Web Interface**: Interactive directory browser with Parent Directory navigation
+- **Dynamic Path Resolution**: Support for both absolute and relative paths
+- **Security Features**: Optional path restriction to working directory
+- **Cross-Platform Support**: Compatible with Unix and Windows path formats
+
 ### Web Interface
 - **Frontend**: HTML/CSS/JS in `public/` directory
 - **Backend**: Express + Socket.IO server
 - **Modular JS**: Organized in `modules/` for API, handlers, UI
+- **Real-time Updates**: Socket.IO for live file system operations
+- **Directory Browser**: Interactive UI for navigating file system
 
 ### Documentation
 Complete documentation available in `docs/` directory covering installation, usage, troubleshooting for both CLI and web interfaces.
 
 ---
 
-*Updated for version 2.0.0 - Multi-provider AI CLI and Web Assistant*
+*Updated for version 2.3.0 - Multi-provider AI CLI and Web Assistant with Enhanced File System Navigation*

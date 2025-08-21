@@ -193,6 +193,10 @@ class GeneralMCPCLI {
             case '/history':
                 this.showHistory();
                 break;
+                
+            case '/workdir':
+                await this.changeWorkingDirectory();
+                break;
 
             // New AI management commands
             case '/ai':
@@ -329,6 +333,95 @@ class GeneralMCPCLI {
         }
         
         console.log(chalk.gray('-'.repeat(40)));
+    }
+    
+    async changeWorkingDirectory() {
+        console.log(chalk.cyan.bold('\n📂 Working Directory Management'));
+        console.log(chalk.gray('='.repeat(50)));
+        
+        // Get current working directory
+        const currentDir = this.mcp.getWorkingDirectory();
+        console.log(chalk.cyan(`Current Working Directory: ${currentDir}`));
+        console.log();
+        
+        // Ask for new directory
+        const { action } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'action',
+                message: 'What would you like to do?',
+                choices: [
+                    { name: 'Change working directory', value: 'change' },
+                    { name: 'View directory info', value: 'info' },
+                    { name: 'Back to chat', value: 'back' }
+                ]
+            }
+        ]);
+        
+        if (action === 'back') {
+            return;
+        }
+        
+        if (action === 'info') {
+            // Show directory info
+            const info = await this.mcp.tools.getWorkingDirectoryInfo();
+            if (info.success) {
+                console.log(chalk.cyan('\nDirectory Information:'));
+                console.log(`  Path: ${info.path}`);
+                console.log(`  Files: ${info.files}`);
+                console.log(`  Directories: ${info.directories}`);
+                console.log(`  Total Size: ${info.humanSize}`);
+                console.log(chalk.cyan('\nFile Extensions:'));
+                for (const [ext, count] of Object.entries(info.filesByExtension)) {
+                    console.log(`  ${ext}: ${count} files`);
+                }
+            } else {
+                console.log(chalk.red(`❌ Error: ${info.error}`));
+            }
+            return;
+        }
+        
+        // Change directory
+        const { newDirectory } = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'newDirectory',
+                message: 'Enter new working directory path:',
+                default: currentDir,
+                validate: (input) => {
+                    if (!input.trim()) {
+                        return 'Please enter a directory path';
+                    }
+                    return true;
+                }
+            }
+        ]);
+        
+        // Confirm change
+        const { confirmed } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'confirmed',
+                message: `Change working directory to: ${newDirectory}?`,
+                default: true
+            }
+        ]);
+        
+        if (!confirmed) {
+            console.log(chalk.yellow('⚠️ Working directory change cancelled.'));
+            return;
+        }
+        
+        // Process the change
+        console.log(chalk.yellow(`🔄 Changing working directory to: ${newDirectory}...`));
+        
+        const result = await this.mcp.changeWorkingDirectory(newDirectory);
+        
+        if (result.success) {
+            console.log(chalk.green(`✅ ${result.message}`));
+        } else {
+            console.log(chalk.red(`❌ Error: ${result.error}`));
+        }
     }
 
     async toggleStreamMode() {
@@ -667,6 +760,7 @@ class GeneralMCPCLI {
         console.log('  /stats    - Show usage statistics');
         console.log('  /clear    - Clear conversation history');
         console.log('  /history  - Show conversation history');
+        console.log('  /workdir  - Change working directory');
         
         console.log(chalk.yellow('\nAI Management Commands:'));
         console.log('  /ai       - Show AI providers information');
