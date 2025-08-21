@@ -137,9 +137,6 @@ export class GeneralMCPHandler {
         this.streamMode = enabled;
         this.onStreamChunk = onChunk;
         
-        // Log untuk debugging
-        console.log(`Stream mode diatur ke ${enabled ? 'enabled' : 'disabled'}, handler: ${onChunk ? 'provided' : 'null'}`);
-        
         // Hanya buat ulang RequestHandler jika belum ada
         if (!this.requestHandler) {
             this.requestHandler = new RequestHandler(

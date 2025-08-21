@@ -14,17 +14,18 @@ export class DirectoryTools {
         return this.workingDirectory;
     }
 
-    async listDirectory(dirPath = '') {
+    async listDirectory(dirPath = '', changeMode = false) {
         try {
             // Fix issue with path concatenation
             let fullPath;
             
-            // Consider ANY path that starts with / or a drive letter (Windows) to be absolute
-            if (path.isAbsolute(dirPath)) {
-                // Always use the absolute path directly, don't join with working directory
-                fullPath = dirPath;
-            } else {
-                // It's a relative path, join with working directory
+            if(changeMode){
+                if (path.isAbsolute(dirPath)) {
+                    fullPath = dirPath;
+                } else {
+                    fullPath = path.join(this.workingDirectory, dirPath);
+                }
+            }else{
                 fullPath = path.join(this.workingDirectory, dirPath);
             }
             
@@ -68,18 +69,10 @@ export class DirectoryTools {
 
     async createDirectory(dirPath) {
         try {
-            // Fix issue with path concatenation
             let fullPath;
-            
-            // Consider ANY path that starts with / or a drive letter (Windows) to be absolute
-            if (path.isAbsolute(dirPath)) {
-                // Always use the absolute path directly, don't join with working directory
-                fullPath = dirPath;
-            } else {
-                // It's a relative path, join with working directory
-                fullPath = path.join(this.workingDirectory, dirPath);
-            }
-            
+
+            fullPath = path.join(this.workingDirectory, dirPath);
+
             // Validate path
             await this.validator.validateWritablePath(fullPath);
             
@@ -101,18 +94,8 @@ export class DirectoryTools {
 
     async deleteDirectory(dirPath) {
         try {
-            // Fix issue with path concatenation
-            let fullPath;
-            
-            // Consider ANY path that starts with / or a drive letter (Windows) to be absolute
-            if (path.isAbsolute(dirPath)) {
-                // Always use the absolute path directly, don't join with working directory
-                fullPath = dirPath;
-            } else {
-                // It's a relative path, join with working directory
-                fullPath = path.join(this.workingDirectory, dirPath);
-            }
-            
+            const fullPath = path.join(this.workingDirectory, dirPath);
+
             // Validate path
             await this.validator.validateDirectory(fullPath);
             
