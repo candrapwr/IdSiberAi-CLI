@@ -115,6 +115,9 @@ export class GeneralMCPHandler {
             // Database Operations
             execute_query: this.tools.executeQuery.bind(this.tools),
             
+            // Internet Operations
+            access_url: this.tools.accessUrl.bind(this.tools),
+
             // AI Management Operations
             switch_ai_provider: this.switchAIProvider.bind(this),
             list_ai_providers: this.listAIProviders.bind(this),

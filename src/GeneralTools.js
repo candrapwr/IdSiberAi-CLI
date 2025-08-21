@@ -3,6 +3,7 @@ import { DirectoryTools } from './tools/DirectoryTools.js';
 import { AnalysisTools } from './tools/AnalysisTools.js';
 import { SystemTools } from './tools/SystemTools.js';
 import { S3Tools } from './tools/S3Tools.js';
+import { InternetTools } from './tools/InternetTools.js';
 import { DatabaseTools } from './tools/DatabaseTools.js';
 
 /**
@@ -20,6 +21,7 @@ export class GeneralTools {
         this.analysisTools = new AnalysisTools(workingDirectory);
         this.systemTools = new SystemTools(workingDirectory);
         this.s3Tools = new S3Tools(workingDirectory);
+        this.internetTools = new InternetTools(workingDirectory);
         this.dbTools = new DatabaseTools;
     }
 
@@ -94,6 +96,15 @@ export class GeneralTools {
 
     async getWorkingDirectoryInfo() {
         return await this.systemTools.getWorkingDirectoryInfo();
+    }
+
+    // Internet Operations
+    async accessUrl(url, options) {
+        return await this.internetTools.accessUrl(url, options);
+    }
+
+    async testInternetConnection() {
+        return await this.internetTools.testInternetConnection();
     }
 
     // S3 Operations
