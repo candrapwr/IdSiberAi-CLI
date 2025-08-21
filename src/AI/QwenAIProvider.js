@@ -12,7 +12,7 @@ export class QwenAIProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'qwen3-coder-plus';
+        return 'qwen3-coder-flash';
     }
 
     async chat(messages, options = {}) {
