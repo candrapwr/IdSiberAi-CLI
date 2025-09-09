@@ -20,8 +20,8 @@ export class QwenAIProvider extends BaseAIProvider {
         const request = {
             model: options.model || this.getDefaultModel(),
             messages: this.normalizeMessages(messages),
-            temperature: options.temperature || 0.2,
-            max_tokens: options.max_tokens || 10000,
+            temperature: options.temperature || 0.3,
+            max_tokens: options.max_tokens || 40000,
             stream: options.stream || false
         };
 
