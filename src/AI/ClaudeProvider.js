@@ -12,7 +12,7 @@ export class ClaudeProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'claude-3-5-haiku-20241022';
+        return 'claude-3-7-sonnet-latest';
     }
 
     async chat(messages, options = {}) {
@@ -24,7 +24,7 @@ export class ClaudeProvider extends BaseAIProvider {
         const request = {
             model: options.model || this.getDefaultModel(),
             max_tokens: 7900,
-            temperature: 0.2,
+            temperature: 0.3,
             messages: claudeMessages,
             stream: options.stream || false
         };
