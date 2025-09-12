@@ -5,4 +5,5 @@ export { ClaudeProvider } from './ClaudeProvider.js';
 export { GrokProvider } from './GrokProvider.js';
 export { ZhiPuAIProvider } from './ZhiPuAIProvider.js';
 export { QwenAIProvider } from './QwenAIProvider.js';
+export { GeminiProvider } from './GeminiProvider.js';
 export { AIManager } from './AIManager.js';
