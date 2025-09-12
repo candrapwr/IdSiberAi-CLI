@@ -4,6 +4,7 @@ import { ClaudeProvider } from './ClaudeProvider.js';
 import { GrokProvider } from './GrokProvider.js';
 import { ZhiPuAIProvider } from './ZhiPuAIProvider.js';
 import { QwenAIProvider } from './QwenAIProvider.js';
+import { GeminiProvider } from './GeminiProvider.js';
 import dotenv from 'dotenv';
 
 export class AIManager {
@@ -53,6 +54,12 @@ export class AIManager {
         if (apiKeys.qwen) {
             const qwen = new QwenAIProvider(apiKeys.qwen, this.enableLogging);
             this.providers.set('QwenAI', qwen);
+        }
+
+        // Gemini
+        if (apiKeys.qwen) {
+            const qwen = new GeminiProvider(apiKeys.gemini, this.enableLogging);
+            this.providers.set('Gemini', qwen);
         }
 
         // Set provider pertama yang tersedia sebagai default

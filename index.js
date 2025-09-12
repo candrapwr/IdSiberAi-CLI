@@ -1054,7 +1054,8 @@ async function configureAIProviders() {
         { name: 'Claude', key: 'claude', envVar: 'CLAUDE_API_KEY' },
         { name: 'Grok', key: 'grok', envVar: 'GROK_API_KEY' },
         { name: 'ZhiPuAI', key: 'zhipuai', envVar: 'ZHIPUAI_API_KEY' },
-        { name: 'QwenAI', key: 'qwen', envVar: 'QWEN_API_KEY' }
+        { name: 'QwenAI', key: 'qwen', envVar: 'QWEN_API_KEY' },
+        { name: 'Gemini', key: 'gemini', envVar: 'GEMINI_API_KEY' }
     ];
 
     const apiKeys = {};

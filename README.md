@@ -8,7 +8,7 @@
 
 ## ✨ Features
 
-- 🤖 **Multi-AI Support** - DeepSeek, OpenAI, Claude, Grok, ZhiPuAI, QwenAI
+- 🤖 **Multi-AI Support** - DeepSeek, OpenAI, Claude, Grok, ZhiPuAI, QwenAI, Gemini
 - 🔄 **Provider Switching** - Switch AI providers on the fly
 - 🛡️ **Auto Fallback** - Automatic provider switching on failures
 - 🌐 **Dual Interface** - Choose between CLI and Web interfaces
@@ -143,6 +143,7 @@ flowchart TD
 | **Grok** | ✅ Active | Real-time data, creative tasks | grok-4-0709 |
 | **ZhiPuAI** | ✅ Active | Multilingual, specialized tasks | glm-4, glm-4.5 |
 | **QwenAI** | ✅ Active | Fast, multilingual, coding tasks | qwen-turbo, qwen-plus, qwen-max |
+| **Gemini** | ✅ Active | Fast, multilingual | gemini-2.5-flash/pro,gemini-2.0-flash |
 
 [→ See detailed AI provider guide](./docs/AI_PROVIDERS.md)
 
