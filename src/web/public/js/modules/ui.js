@@ -117,26 +117,81 @@ export function addSystemMessage(message, type = 'info') {
 }
 
 // Format assistant message (convert markdown to HTML)
-export function formatAssistantMessage(content,stream = false) {
-    if(!stream){
-        marked.setOptions({
-            highlight: function(code, lang) {
-                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-                return hljs.highlight(code, { language }).value;
-            },
-            langPrefix: 'hljs language-',
-            breaks: true
-        });
-        return marked.parse(content);
-    }else{
-        return content;
+// Markdown-it instance configured with highlight.js
+const md = window.markdownit({
+    html: false,
+    linkify: true,
+    breaks: true,
+    highlight: function (str, lang) {
+        try {
+            if (lang && hljs.getLanguage(lang)) {
+                const out = hljs.highlight(str, { language: lang }).value;
+                return `<pre><code class="hljs language-${lang}">${out}</code></pre>`;
+            }
+        } catch (__) {}
+        const esc = str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        return `<pre><code class="hljs">${esc}</code></pre>`;
+    }
+});
+
+export function formatAssistantMessage(content, stream = false) {
+    if (!stream) {
+        return md.render(content);
+    } else {
+        // Streaming-friendly lightweight formatter
+        // - Render lines starting with TOOLCALL: as a JSON code block
+        // - Render lines starting with THINK: as subtle text
+        // - Escape other text and preserve line breaks
+
+        const escapeHTML = (s) => s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        const lines = content.split(/\r?\n/);
+        const parts = [];
+        for (const line of lines) {
+            const m = line.match(/^\s*TOOLCALL:\s*(\{.*\})\s*$/);
+            if (m) {
+                // Pretty print if possible
+                let jsonText = m[1];
+                try {
+                    const obj = JSON.parse(jsonText);
+                    jsonText = JSON.stringify(obj, null, 2);
+                } catch (_) {
+                    // keep as is
+                }
+                const block = `<pre><code class="hljs language-json">${escapeHTML('TOOLCALL: ' + jsonText)}</code></pre>`;
+                parts.push(block);
+                continue;
+            }
+
+            const think = line.match(/^\s*THINK:\s*(.*)$/);
+            if (think) {
+                parts.push(`<div class="text-muted small">🤔 ${escapeHTML(think[1])}</div>`);
+                continue;
+            }
+
+            parts.push(`<div>${escapeHTML(line)}</div>`);
+        }
+        return parts.join('');
     }
 }
 
 // Highlight code blocks
 export function highlightCodeBlocks() {
     document.querySelectorAll('pre code').forEach((block) => {
-        hljs.highlightBlock(block);
+        if (hljs.highlightElement) {
+            hljs.highlightElement(block);
+        } else {
+            // Backward compatibility
+            hljs.highlightBlock(block);
+        }
     });
 }
 
