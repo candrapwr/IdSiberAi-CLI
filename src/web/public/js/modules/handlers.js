@@ -8,6 +8,11 @@ let sessionInfo = null;
 let currentMessageContent = '';
 let streamMessageDiv = null;
 let streamStarted = false;
+// TOOLCALL streaming state
+let toolcallActive = false;
+let toolcallStartIndex = -1;
+let toolcallCodeEl = null;
+let lastRenderedIndex = 0;
 
 // Setup Socket.io listeners
 export function setupSocketListeners(socket) {
@@ -82,6 +87,10 @@ export function handleResetStream() {
     currentMessageContent = '';
     streamMessageDiv = null;
     streamStarted = false;
+    toolcallActive = false;
+    toolcallStartIndex = -1;
+    toolcallCodeEl = null;
+    lastRenderedIndex = 0;
     console.log('Stream state reset');
 }
 
@@ -129,7 +138,7 @@ export function handleStreamChunk(data) {
         streamMessageDiv = document.createElement('div');
         streamMessageDiv.className = 'message message-assistant';
         streamMessageDiv.innerHTML = `
-            <div class="message-content"><pre><code class="code_respone"></code></pre></div>
+            <div class="message-content"><div class="stream_content"></div></div>
             <div class="message-meta">
                 ${currentProvider ? `<span><i class="bi bi-cpu"></i> ${currentProvider}</span>` : ''}
             </div>
@@ -141,19 +150,66 @@ export function handleStreamChunk(data) {
     if (data && data.chunk) {
         if(data.chunk != 'newMessageAssistant'){
             currentMessageContent += data.chunk;
-            
-            // Format and update the content
-            const contentDiv = streamMessageDiv.querySelector('.code_respone');
-            contentDiv.innerHTML = formatAssistantMessage(currentMessageContent,true);
-            
-            // Apply syntax highlighting
-            highlightCodeBlocks();
-            
+            const contentDiv = streamMessageDiv.querySelector('.stream_content');
+
+            // Detect TOOLCALL start if not already active
+            if (!toolcallActive) {
+                const match = currentMessageContent.match(/(^|\n)\s*TOOLCALL:\s*/);
+                if (match) {
+                    // Render text before TOOLCALL
+                    const before = currentMessageContent.slice(lastRenderedIndex, match.index);
+                    if (before) {
+                        contentDiv.innerHTML += formatAssistantMessage(before, true);
+                        lastRenderedIndex = match.index;
+                    }
+                    // Create code block
+                    const pre = document.createElement('pre');
+                    const code = document.createElement('code');
+                    code.className = 'hljs language-json';
+                    pre.appendChild(code);
+                    contentDiv.appendChild(pre);
+                    toolcallCodeEl = code;
+                    toolcallActive = true;
+                    toolcallStartIndex = match.index + match[0].length; // after TOOLCALL:
+                    // Seed label
+                    toolcallCodeEl.textContent = 'TOOLCALL: ';
+                }
+            }
+
+            if (toolcallActive && toolcallCodeEl) {
+                const afterText = currentMessageContent.slice(toolcallStartIndex);
+                let rendered = 'TOOLCALL: ' + afterText;
+                // Try to pretty print if JSON is complete
+                try {
+                    const firstBrace = afterText.indexOf('{');
+                    if (firstBrace !== -1) {
+                        const jsonCandidate = afterText.slice(firstBrace);
+                        const obj = JSON.parse(jsonCandidate);
+                        rendered = 'TOOLCALL: ' + JSON.stringify(obj, null, 2);
+                    }
+                } catch (_) {}
+                toolcallCodeEl.textContent = rendered;
+                if (window.hljs && window.hljs.highlightElement) {
+                    window.hljs.highlightElement(toolcallCodeEl);
+                }
+            } else {
+                // No TOOLCALL yet: render whole streaming content normally
+                const slice = currentMessageContent.slice(lastRenderedIndex);
+                if (slice) {
+                    contentDiv.innerHTML = formatAssistantMessage(currentMessageContent, true);
+                    lastRenderedIndex = currentMessageContent.length;
+                }
+            }
+
             // Scroll to the bottom
             scrollToBottom();
         }else{
             streamMessageDiv = null;
             currentMessageContent = '';
+            toolcallActive = false;
+            toolcallStartIndex = -1;
+            toolcallCodeEl = null;
+            lastRenderedIndex = 0;
         }
     } else {
         console.warn('Received empty chunk');

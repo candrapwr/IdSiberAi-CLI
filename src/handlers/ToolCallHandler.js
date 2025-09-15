@@ -26,8 +26,7 @@ export class ToolCallHandler {
                 error_message: errorMessage,
                 title: title,
                 raw_content: rawContent
-            },
-            message: `Error: ${title} - ${errorMessage}`
+            }
         };
     }
 
@@ -42,115 +41,37 @@ export class ToolCallHandler {
             }
             
             const toolCalls = [];
-            
-            // Find all ACTION blocks in the response
-            const actionBlocks = response.split(/(?=THINKING:|ACTION:)/);
-            
-            for (const block of actionBlocks) {
-                const actionMatch = block.match(/ACTION:\s*(\w+)/);
-                if (!actionMatch) continue;
-                
-                const parametersMatch = block.match(/PARAMETERS:\s*({.*?})(?=\n(?:THINKING|ACTION|PARAMETERS|MESSAGE|$)|$)/s);
-                const messageMatch = block.match(/MESSAGE:\s*(.*?)(?=\n(?:THINKING|ACTION|PARAMETERS|MESSAGE|$)|$)/s);
-                const thinkingMatch = block.match(/THINKING:\s*(.*?)(?=\n(?:ACTION|PARAMETERS|MESSAGE|$)|$)/s);
-                
-                if (actionMatch && parametersMatch) {
-                    try {
-                        // Ambil string parameter mentah
-                        let rawParams = parametersMatch[1];
-                        let cleanedParameters = rawParams;
 
-                        const stringValuePattern = /"([^"]+)"\s*:\s*"((?:\\.|[^"\\])*)"/gs;
-                        cleanedParameters = rawParams.replace(stringValuePattern, (match, key, value) => {
-                            // FIX: Jangan gunakan JSON.stringify yang akan double-escape
-                            // Cukup escape quotes dan backslashes yang memang perlu di-escape
-                            let cleanValue = value
-                                .replace(/\\\\/g, '\\')     // Unescape double backslashes
-                                .replace(/\\"/g, '"')       // Unescape quotes
-                                .replace(/\\n/g, '\n')      // Convert literal \n to actual newlines
-                                .replace(/\\t/g, '\t')      // Convert literal \t to actual tabs
-                                .replace(/\\r/g, '\r');     // Convert literal \r to actual carriage returns
-                            
-                            // Sekarang escape untuk JSON yang proper
-                            cleanValue = cleanValue
-                                .replace(/\\/g, '\\\\')     // Escape backslashes
-                                .replace(/"/g, '\\"')       // Escape quotes
-                                .replace(/\n/g, '\\n')      // Escape newlines
-                                .replace(/\t/g, '\\t')      // Escape tabs
-                                .replace(/\r/g, '\\r');     // Escape carriage returns
-                            
-                            return `"${key}": "${cleanValue}"`;
-                        });
-
-                        // 2. Sebagai fallback, jalankan logika lama Anda untuk kasus spesifik di mana
-                        // nilai dibungkus dengan backtick, bukan tanda kutip (bukan JSON valid).
-                        const backtickValuePattern = /"([^"]+)"\s*:\s*`((?:\\`|[^`])*?)`(?=\s*[,}])/g;
-                        cleanedParameters = cleanedParameters.replace(backtickValuePattern, (match, key, value) => {
-                            // FIX: Sama seperti di atas, jangan double-escape
-                            let cleanValue = value
-                                .replace(/\\`/g, '`')       // Unescape backticks
-                                .replace(/\\n/g, '\n')      // Convert literal \n to actual newlines
-                                .replace(/\\t/g, '\t')      // Convert literal \t to actual tabs
-                                .replace(/\\r/g, '\r');     // Convert literal \r to actual carriage returns
-                            
-                            // Escape untuk JSON
-                            cleanValue = cleanValue
-                                .replace(/\\/g, '\\\\')     // Escape backslashes
-                                .replace(/"/g, '\\"')       // Escape quotes
-                                .replace(/\n/g, '\\n')      // Escape newlines
-                                .replace(/\t/g, '\\t')      // Escape tabs
-                                .replace(/\r/g, '\\r');     // Escape carriage returns
-                            
-                            return `"${key}": "${cleanValue}"`;
-                        });
-
-                        // String `cleanedParameters` sekarang seharusnya sudah menjadi JSON yang valid
-                        const parameters = JSON.parse(cleanedParameters);
-                        
-                        const toolCall = {
-                            thinking: thinkingMatch ? thinkingMatch[1].trim() : '',
-                            action: actionMatch[1],
-                            parameters,
-                            message: messageMatch ? messageMatch[1].trim() : ''
-                        };
-                        
-                        toolCalls.push(toolCall);
-
-                    } catch (jsonError) {
-                        console.error(chalk.red(`❌ Error parsing parameters JSON for ${actionMatch[1]}:`), jsonError.message);
-                        console.error(chalk.red('Raw parameters:'), parametersMatch[1]);
-                        
-                        // Buat tool call error untuk parameter parsing failure
-                        toolCalls.push({
-                            thinking: thinkingMatch ? thinkingMatch[1].trim() : 'Parameter parsing failed',
-                            action: `json_malformed`,
-                            parameters: {
-                                error: `Parameter parsing failed: ${jsonError.message}`,
-                                rawParameters: parametersMatch[1],
-                                originalAction: actionMatch[1]
-                            },
-                            message: messageMatch ? messageMatch[1].trim() : 'Failed to parse tool parameters'
-                        });
-                        
-                        // Log parsing error
-                        if (this.logger) {
-                            this.logger.logError(jsonError, {
-                                context: 'tool_call_parsing',
-                                rawResponse: block,
-                                rawParameters: parametersMatch[1],
-                                sessionId: this.sessionId
-                            }).catch(logError => {
-                                console.error(chalk.red('❌ Failed to log parsing error:'), logError.message);
-                            });
+            // Preferred: parse single-line streaming-friendly TOOLCALL: { json }
+            try {
+                const lines = response.split(/\r?\n/);
+                for (const line of lines) {
+                    const m = line.match(/^\s*TOOLCALL:\s*(\{.*\})\s*$/);
+                    if (m) {
+                        try {
+                            const obj = JSON.parse(m[1]);
+                            if (obj && typeof obj === 'object' && typeof obj.action === 'string') {
+                                toolCalls.push({
+                                    thinking: obj.thinking || '',
+                                    action: obj.action,
+                                    parameters: obj.parameters || {}
+                                });
+                            }
+                        } catch (jsonErr) {
+                            toolCalls.push(this._createErrorToolCall(
+                                'Malformed TOOLCALL JSON',
+                                jsonErr.message,
+                                'json_malformed',
+                                line
+                            ));
                         }
                     }
                 }
+            } catch (_) {
+                // ignore and fallback
             }
-            
-            if (toolCalls.length > 0) {
-                console.log(chalk.blue(`🎯 Found ${toolCalls.length} tool calls: ${toolCalls.map(tc => tc.action).join(', ')}`));
-            }
-            
+
+            // Only new format supported; return TOOLCALL results (possibly empty)
             return toolCalls;
         } catch (error) {
             console.error(chalk.red('❌ Error in extractAllToolCalls:'), error.message);
@@ -308,9 +229,6 @@ export class ToolCallHandler {
             // Show AI's thinking and message to user
             if (toolCall.thinking) {
                 console.log(`🤔 ${toolCall.thinking}`);
-            }
-            if (toolCall.message) {
-                console.log(chalk.blue(`⚡ ${toolCall.message}`));
             }
 
             // Execute tool

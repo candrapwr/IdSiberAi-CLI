@@ -32,7 +32,7 @@ export class ContextOptimizer {
         };
         
         // Version tracking (untuk membantu debugging)
-        this.version = "1.1.0"; // Fixed version with improved algorithm
+        this.version = "1.2.0"; // Add TOOLCALL format support
         
         // Minimal log on initialization
         if (this.debug) {
@@ -195,8 +195,8 @@ export class ContextOptimizer {
             if (message.role === 'assistant') {
                 if (message.tool_calls) {
                     console.log(`[Context Optimizer] Message has ${message.tool_calls.length} tool_calls in OpenAI format`);
-                } else if (message.content && message.content.includes('ACTION:')) {
-                    console.log(`[Context Optimizer] Message has ACTION: pattern`);
+                } else if (message.content && message.content.includes('TOOLCALL:')) {
+                    console.log(`[Context Optimizer] Message has TOOLCALL pattern`);
                 } else if (message.content && message.content.includes('read_file')) {
                     console.log(`[Context Optimizer] Message may contain read_file calls`);
                 }
@@ -246,25 +246,49 @@ export class ContextOptimizer {
                 // Format custom DeepSeek/Claude
                 else if (message.content) {
                     // Cari pola tool call dalam teks
-                    // Format: "I'll use the read_file tool to read ..." atau sejenisnya
+                    // Tambahan: dukung format streaming single-line
+                    //   TOOLCALL: {"action":"read_file","parameters":{...}}
+                    try {
+                        const lines = message.content.split(/\r?\n/);
+                        for (const line of lines) {
+                            const m = line.match(/^\s*TOOLCALL:\s*(\{.*\})\s*$/);
+                            if (m) {
+                                try {
+                                    const obj = JSON.parse(m[1]);
+                                    const action = obj?.action;
+                                    if (action && this.optimizedActions.has(action)) {
+                                        const paramsText = JSON.stringify(obj.parameters || {});
+                                        const key = `${action}:${paramsText}`;
+                                        if (this.debug && this.debugLevel > 1) {
+                                            console.log(`[Context Optimizer] Found TOOLCALL line for ${action} at index ${i}`);
+                                        }
+                                        if (!toolCallMap.has(key)) {
+                                            toolCallMap.set(key, []);
+                                        }
+                                        toolCallMap.get(key).push(i);
+                                    }
+                                } catch (_) {
+                                    // ignore malformed TOOLCALL
+                                }
+                            }
+                        }
+                    } catch (_) {
+                        // ignore
+                    }
+
+                    // Format naratif lama: "I'll use the read_file tool to ..." atau sejenisnya
                     
                     // Cek setiap action yang dioptimasi
                     for (const action of this.optimizedActions) {
-                        // Pola umum untuk mendeteksi tool call
+                        // Pola umum untuk mendeteksi tool call (tanpa ACTION/THINKING/PARAMETERS)
                         const patterns = [
-                            // Pola 1: "I'll use read_file to..."
+                            // Naratif: "I'll use read_file to... {json}"
                             new RegExp(`(I'll use|I will use|Using|Let me use|Let's use)\\s+(?:the\\s+)?${action}\\s+(?:tool\\s+)?(?:to|function|action)[\\s\\S]+?(\\{[\\s\\S]+?\\})`, 'i'),
                             
-                            // Pola 2: "ACTION: read_file"
-                            new RegExp(`ACTION\\s*:\\s*${action}[\\s\\S]*?PARAMETERS\\s*:\\s*(\\{[\\s\\S]+?\\})`, 'i'),
-                            
-                            // Pola 3: mencari JSON langsung setelah nama action
+                            // Bentuk fungsi: read_file({ ... })
                             new RegExp(`${action}\\s*\\(([\\s\\S]+?)\\)`, 'i'),
                             
-                            // Pola 4: format THINKING/ACTION/PARAMETERS
-                            new RegExp(`THINKING:[\\s\\S]*?ACTION:\\s*${action}[\\s\\S]*?PARAMETERS:\\s*(\\{[\\s\\S]+?\\})`, 'i'),
-                            
-                            // Pola 5: "I need to" format
+                            // Naratif lain: "I need to use read_file ... {json}"
                             new RegExp(`(I need to|I should|I can|I will)\\s+(?:use\\s+)?${action}\\s+(?:to|for)[\\s\\S]+?(\\{[\\s\\S]+?\\})`, 'i')
                         ];
                         

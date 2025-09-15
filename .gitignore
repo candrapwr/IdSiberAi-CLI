@@ -141,3 +141,5 @@ vite.config.ts.timestamp-*
 
 /demo
 /demo/*
+/demo2
+/demo2/*
