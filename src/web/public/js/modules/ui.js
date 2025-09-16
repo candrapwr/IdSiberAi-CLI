@@ -182,7 +182,7 @@ export function formatAssistantMessage(content, stream = false) {
                 continue;
             }
 
-            // parts.push(`<div>${escapeHTML(line)}</div>`);
+            parts.push(`<div>${escapeHTML(line)}</div>`);
         }
         return parts.join('');
     }
@@ -197,7 +197,52 @@ export function highlightCodeBlocks() {
             // Backward compatibility
             hljs.highlightBlock(block);
         }
+        // Attach copy buttons after highlighting
+        try { addCopyButtonToCodeBlock(block); } catch (_) {}
     });
+}
+
+// Add a copy-to-clipboard button to a code block
+function addCopyButtonToCodeBlock(codeEl) {
+    const pre = codeEl.closest('pre');
+    if (!pre) return;
+    if (pre.querySelector('.copy-code-btn')) return; // already added
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-code-btn';
+    btn.innerHTML = '<i class="bi bi-clipboard"></i><span>Copy</span>';
+    btn.addEventListener('click', async () => {
+        const text = codeEl.innerText || codeEl.textContent || '';
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+            btn.classList.add('copied');
+            btn.innerHTML = '<i class="bi bi-check2"></i><span>Copied</span>';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.innerHTML = '<i class="bi bi-clipboard"></i><span>Copy</span>';
+            }, 1200);
+        } catch (err) {
+            btn.innerHTML = '<i class="bi bi-x-circle"></i><span>Failed</span>';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="bi bi-clipboard"></i><span>Copy</span>';
+            }, 1500);
+        }
+    });
+
+    pre.appendChild(btn);
 }
 
 // Build a collapsible accordion for a TOOLCALL JSON string
