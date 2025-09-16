@@ -45,6 +45,9 @@ export function autoResizeTextarea() {
 
 // Show typing indicator
 let currentlyTyping = false;
+let autoScrollEnabled = true; // smart autoscroll state
+// Expose for other modules' best-effort checks
+window.__autoScrollEnabled = autoScrollEnabled;
 export function showTypingIndicator() {
     if (currentlyTyping) return;
     
@@ -94,9 +97,11 @@ export function addMessage(role, content, metadata = {}) {
     `;
     
     messagesContainer.appendChild(messageDiv);
-    
-    // Scroll to the bottom
-    scrollToBottom();
+
+    // Smart auto-scroll: only if enabled
+    if (autoScrollEnabled) {
+        scrollToBottom();
+    }
     
     // Apply syntax highlighting
     if (role === 'assistant') {
@@ -437,6 +442,12 @@ export function setupDOMEventHandlers(socket) {
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', toggleTheme);
     }
+
+    // Attach smart autoscroll listener
+    const chatWindow = document.querySelector('.chat-window');
+    if (chatWindow) {
+        chatWindow.addEventListener('scroll', handleChatScroll, { passive: true });
+    }
     
     // Quick prompt buttons
     const quickPromptBtns = document.querySelectorAll('.quick-prompt-btn');
@@ -491,6 +502,34 @@ export function setupDOMEventHandlers(socket) {
             }
         }
     });
+}
+
+// Smart autoscroll handlers
+function handleChatScroll() {
+    const chatWindow = document.querySelector('.chat-window');
+    if (!chatWindow) return;
+
+    const threshold = 16; // px tolerance from bottom
+    const distanceFromBottom = chatWindow.scrollHeight - chatWindow.clientHeight - chatWindow.scrollTop;
+    const atBottom = distanceFromBottom <= threshold;
+
+    // If user scrolls up from bottom, disable autoscroll
+    if (!atBottom && autoScrollEnabled) {
+        autoScrollEnabled = false;
+        window.__autoScrollEnabled = false;
+        setAutoScrollIndicator(false);
+    }
+
+    // If user scrolls back to bottom, enable autoscroll
+    if (atBottom && !autoScrollEnabled) {
+        autoScrollEnabled = true;
+        window.__autoScrollEnabled = true;
+        setAutoScrollIndicator(true);
+    }
+}
+
+function setAutoScrollIndicator(enabled) {
+    // Optional: could update a subtle UI indicator; noop for now
 }
 
 // Handle form submission

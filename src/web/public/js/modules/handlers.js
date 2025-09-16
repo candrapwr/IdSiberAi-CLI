@@ -118,7 +118,10 @@ export function handleToolExecution(data) {
     
     // Add to messages container
     document.getElementById('messagesContainer').appendChild(systemMessageDiv);
-    scrollToBottom();
+    // Only autoscroll if enabled (ui.js controls state); fallback safe
+    try {
+        if (window.__autoScrollEnabled !== false) scrollToBottom();
+    } catch (_) { scrollToBottom(); }
     
     // Hide typing indicator and show a new one
     hideTypingIndicator();
@@ -201,8 +204,9 @@ export function handleStreamChunk(data) {
                 }
             }
 
-            // Scroll to the bottom
-            scrollToBottom();
+            try {
+                if (window.__autoScrollEnabled !== false) scrollToBottom();
+            } catch (_) { scrollToBottom(); }
         }else{
             streamMessageDiv = null;
             currentMessageContent = '';
@@ -384,7 +388,9 @@ export function handleError(data) {
     }
     
     document.getElementById('messagesContainer').appendChild(errorDiv);
-    scrollToBottom();
+    try {
+        if (window.__autoScrollEnabled !== false) scrollToBottom();
+    } catch (_) { scrollToBottom(); }
     
     // Reset stream state
     streamMessageDiv = null;
