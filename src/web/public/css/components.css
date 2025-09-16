@@ -184,3 +184,72 @@
     font-size: 0.8rem;
     color: var(--text-muted);
 }
+.toolcall-accordion { 
+  margin-top: 10px; 
+  background: linear-gradient(180deg, rgba(30,30,30,0.95), rgba(25,25,25,0.95)); 
+  border: 1px solid #2f2f2f; 
+  border-radius: 12px; 
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+.toolcall-header { 
+  padding: 8px 10px; 
+  color: #ddd; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  border-bottom: 1px solid #2a2a2a;
+  /* Hide stray text nodes (e.g., '+' artifacts) while preserving children */
+  font-size: 0;
+}
+.toolcall-header > * { font-size: 0.95rem; }
+.toolcall-title { display:flex; align-items:center; gap:8px; font-weight:600; color:#e2e2e2; }
+.toolcall-title .bi { color:#9aa0ff; }
+.toolcall-body.collapse { display: none; }
+.toolcall-body.show { 
+  display: block; 
+  background-color: #151515; 
+  border-top: 1px solid #2a2a2a; 
+  padding: 0px; 
+  border-bottom-left-radius: 12px; 
+  border-bottom-right-radius: 12px; 
+}
+.toolcall-accordion .toolcall-body.show ~ .toolcall-header { border-bottom-color: transparent; }
+.toolcall-loading { vertical-align: middle; }
+.toolcall-accordion pre { background: transparent; color: #ddd; }
+.toolcall-accordion code { background: transparent; color: #ddd; }
+.toolcall-accordion .btn.toolcall-toggle { 
+  color: #c9c9c9; 
+  border-color: #4a4a4a; 
+  background: rgba(255,255,255,0.02);
+  padding: 3px 8px;
+}
+.toolcall-accordion .btn.toolcall-toggle:hover { 
+  background-color: #2a2a2a; 
+  border-color: #666; 
+  color: #fff; 
+}
+
+/* Tool Result card (dark) */
+.toolresult-card.card { 
+  background: linear-gradient(180deg, rgba(30,30,30,0.95), rgba(24,24,24,0.95)); 
+  border-color: #303030; 
+  color: #ddd; 
+  border-radius: 12px; 
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+.toolresult-card .card-header { 
+  background-color: #181818; 
+  border-bottom-color: #2f2f2f; 
+  color: #e2e2e2; 
+  font-weight: 600;
+}
+.toolresult-card .card-header .title { display:flex; align-items:center; gap:8px; }
+.toolresult-card .card-header .title .bi { color:#ffcf99; }
+.toolresult-card .card-body { color: #d3d3d3; }
+.toolresult-card .btn.btn-outline-secondary { color: #bbb; border-color: #555; }
+.toolresult-card .btn.btn-outline-secondary:hover { background-color: #2a2a2a; border-color: #666; color: #fff; }
+.toolresult-card pre { background: transparent; color: #ddd; }
+.toolresult-card code { background: transparent; color: #ddd; }
+pre code.hljs {
+    padding: 0.3em !important;
+}

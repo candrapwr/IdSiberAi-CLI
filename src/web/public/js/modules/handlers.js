@@ -1,5 +1,5 @@
 // Socket.io event handlers
-import { addMessage, addSystemMessage, formatAssistantMessage, highlightCodeBlocks, scrollToBottom, showTypingIndicator, hideTypingIndicator } from './ui.js';
+import { addMessage, addSystemMessage, formatAssistantMessage, highlightCodeBlocks, scrollToBottom, showTypingIndicator, hideTypingIndicator, upgradeToolcallBlocks, buildToolResultCard, upgradeToolResultBlocks } from './ui.js';
 import { fetchToolsList, displayStats, displayProviderTests } from './api.js';
 
 // Global variables
@@ -42,6 +42,11 @@ export function setupSocketListeners(socket) {
     
     // Error handling
     socket.on('error', handleError);
+
+    // Stop event: ensure any toolcall spinners are cleared
+    socket.on('stopped', () => {
+        try { document.querySelectorAll('.toolcall-loading').forEach(el => el.remove()); } catch(_) {}
+    });
     
     // Connection status
     socket.on('connect', () => {
@@ -92,32 +97,25 @@ export function handleResetStream() {
     toolcallCodeEl = null;
     lastRenderedIndex = 0;
     console.log('Stream state reset');
+    // Clear any lingering toolcall spinners from previous cycle
+    try { document.querySelectorAll('.toolcall-loading').forEach(el => el.remove()); } catch(_) {}
 }
 
 // Handle tool execution
 export function handleToolExecution(data) {    
-    // Create a system message for the tool execution
+    // Add a compact header-like system message (muted)
     const systemMessageDiv = document.createElement('div');
     systemMessageDiv.className = 'system-message';
-    
-    // Format the message based on success/failure
-    if (data.result.success) {
-        systemMessageDiv.innerHTML = `<i class="bi bi-tools me-2"></i> Tool <strong>${data.tool}</strong> executed successfully`;
-    } else {
-        systemMessageDiv.classList.add('alert-danger');
-        systemMessageDiv.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i> Tool <strong>${data.tool}</strong> failed: ${data.result.error || 'Unknown error'}`;
-    }
-    
-    // Add tool result details if interesting
-    if (data.result.success && data.result.message) {
-        const detailsDiv = document.createElement('div');
-        detailsDiv.className = 'small mt-1';
-        detailsDiv.textContent = data.result.message;
-        systemMessageDiv.appendChild(detailsDiv);
-    }
-    
-    // Add to messages container
+    systemMessageDiv.innerHTML = `<i class="bi bi-tools me-2"></i>Tool <strong>${data.tool}</strong> ${data.result.success ? 'executed successfully' : 'failed'}`;
     document.getElementById('messagesContainer').appendChild(systemMessageDiv);
+    // Also render a richer Tool Result card
+    try {
+        const details = typeof data.result === 'object' ? JSON.stringify(data.result, null, 2) : (data.result?.message || '');
+        const summary = data.result?.message || (data.result.success ? 'Tool executed successfully' : (data.result.error || 'Tool failed'));
+        const card = buildToolResultCard({ name: data.tool, success: !!data.result.success, summary, details });
+        document.getElementById('messagesContainer').appendChild(card);
+    } catch(_) {}
+
     // Only autoscroll if enabled (ui.js controls state); fallback safe
     try {
         if (window.__autoScrollEnabled !== false) scrollToBottom();
@@ -165,30 +163,70 @@ export function handleStreamChunk(data) {
                         contentDiv.innerHTML += formatAssistantMessage(before, true);
                         lastRenderedIndex = match.index;
                     }
-                    // Create code block
+                    // Skip the TOOLCALL label so it doesn't render as plaintext
+                    lastRenderedIndex = match.index + match[0].length;
+                    // Create collapsible accordion for TOOLCALL
+                    const accordion = document.createElement('div');
+                    accordion.className = 'toolcall-accordion';
+                    const header = document.createElement('div');
+                    header.className = 'toolcall-header';
+                    header.innerHTML = '<div class="toolcall-title"><span>Tool Call</span></div>\n+                    <div class="d-flex align-items-center gap-2">\n+                        <button class="btn btn-sm btn-outline-secondary toolcall-toggle"><i class="bi bi-caret-right-fill me-1"></i>Click to expand</button>\n+                        <span class="toolcall-loading ms-2"><span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span></span>\n+                    </div>';
+
+                    // Rebuild header via DOM nodes to avoid stray '+' artifacts
+                    header.textContent = '';
+                    const titleEl = document.createElement('div');
+                    titleEl.className = 'toolcall-title';
+                    titleEl.innerHTML = '<span>Tool Call</span>';
+                    const toolcallToggleBtn = document.createElement('button');
+                    toolcallToggleBtn.className = 'btn btn-sm btn-outline-secondary toolcall-toggle';
+                    toolcallToggleBtn.innerHTML = '<i class="bi bi-caret-right-fill me-1"></i>Click to expand';
+                    const loadingEl = document.createElement('span');
+                    loadingEl.className = 'toolcall-loading ms-2';
+                    loadingEl.innerHTML = '<span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>';
+                    header.appendChild(titleEl);
+                    header.appendChild(toolcallToggleBtn);
+                    header.appendChild(loadingEl);
+                    const body = document.createElement('div');
+                    body.className = 'toolcall-body collapse';
                     const pre = document.createElement('pre');
                     const code = document.createElement('code');
                     code.className = 'hljs language-json';
                     pre.appendChild(code);
-                    contentDiv.appendChild(pre);
+                    body.appendChild(pre);
+                    accordion.appendChild(header);
+                    accordion.appendChild(body);
+                    contentDiv.appendChild(accordion);
+
+                    // Toggle behavior
+                    const toggleBtn = toolcallToggleBtn;
+                    toggleBtn.addEventListener('click', () => {
+                        const isShown = body.classList.toggle('show');
+                        const icon = toggleBtn.querySelector('i');
+                        if (icon) icon.className = isShown ? 'bi bi-caret-down-fill me-1' : 'bi bi-caret-right-fill me-1';
+                        toggleBtn.innerHTML = `${icon ? icon.outerHTML : ''}${isShown ? 'Click to collapse' : 'Click to expand'}`;
+                        if (isShown) {
+                            body.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                    });
+
                     toolcallCodeEl = code;
                     toolcallActive = true;
                     toolcallStartIndex = match.index + match[0].length; // after TOOLCALL:
-                    // Seed label
-                    toolcallCodeEl.textContent = 'TOOLCALL: ';
+                    // Seed label (kept for progressive rendering, but hidden in accordion title)
+                    toolcallCodeEl.textContent = '';
                 }
             }
 
             if (toolcallActive && toolcallCodeEl) {
                 const afterText = currentMessageContent.slice(toolcallStartIndex);
-                let rendered = 'TOOLCALL: ' + afterText;
+                let rendered = afterText;
                 // Try to pretty print if JSON is complete
                 try {
                     const firstBrace = afterText.indexOf('{');
                     if (firstBrace !== -1) {
                         const jsonCandidate = afterText.slice(firstBrace);
                         const obj = JSON.parse(jsonCandidate);
-                        rendered = 'TOOLCALL: ' + JSON.stringify(obj, null, 2);
+                        rendered = JSON.stringify(obj, null, 2);
                     }
                 } catch (_) {}
                 toolcallCodeEl.textContent = rendered;
@@ -208,6 +246,8 @@ export function handleStreamChunk(data) {
                 if (window.__autoScrollEnabled !== false) scrollToBottom();
             } catch (_) { scrollToBottom(); }
         }else{
+            // New assistant message cycle: ensure previous cycle spinners are removed
+            try { document.querySelectorAll('.toolcall-loading').forEach(el => el.remove()); } catch(_) {}
             streamMessageDiv = null;
             currentMessageContent = '';
             toolcallActive = false;
@@ -251,6 +291,9 @@ export function handleAssistantResponse(data) {
         }
     }
     
+    // Remove any toolcall loading indicators (stream finished)
+    document.querySelectorAll('.toolcall-loading').forEach(el => el.remove());
+
     // Reset streaming state after handling the response
     streamMessageDiv = null;
     currentMessageContent = '';
@@ -391,6 +434,9 @@ export function handleError(data) {
     try {
         if (window.__autoScrollEnabled !== false) scrollToBottom();
     } catch (_) { scrollToBottom(); }
+
+    // Stop any TOOLCALL loading indicators on error
+    document.querySelectorAll('.toolcall-loading').forEach(el => el.remove());
     
     // Reset stream state
     streamMessageDiv = null;
@@ -420,6 +466,12 @@ export function displayConversationHistory(history) {
             }
         }
     });
+
+    // Rehydrate assistant messages: upgrade TOOLCALL blocks and re-highlight code
+    const container = document.getElementById('messagesContainer');
+    upgradeToolcallBlocks(container);
+    upgradeToolResultBlocks(container);
+    highlightCodeBlocks();
 }
 
 // Export important variables
