@@ -178,11 +178,11 @@ export function formatAssistantMessage(content, stream = false) {
 
             const think = line.match(/^\s*THINK:\s*(.*)$/);
             if (think) {
-                parts.push(`<div class="text-muted small">🤔 ${escapeHTML(think[1])}</div>`);
+                parts.push(`<div class="text-muted small">${escapeHTML(think[1])}</div>`);
                 continue;
             }
 
-            parts.push(`<div>${escapeHTML(line)}</div>`);
+            // parts.push(`<div>${escapeHTML(line)}</div>`);
         }
         return parts.join('');
     }
@@ -197,6 +197,165 @@ export function highlightCodeBlocks() {
             // Backward compatibility
             hljs.highlightBlock(block);
         }
+    });
+}
+
+// Build a collapsible accordion for a TOOLCALL JSON string
+export function buildToolcallAccordion(jsonText) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'toolcall-accordion';
+
+    const header = document.createElement('div');
+    header.className = 'toolcall-header';
+    header.innerHTML = '<button class="btn btn-sm btn-outline-secondary toolcall-toggle"><i class="bi bi-caret-right-fill me-1"></i>Tool Call (click to expand)</button>';
+
+    const body = document.createElement('div');
+    body.className = 'toolcall-body collapse';
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    code.className = 'hljs language-json';
+    code.textContent = jsonText;
+    pre.appendChild(code);
+    body.appendChild(pre);
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(body);
+
+    const toggleBtn = header.querySelector('.toolcall-toggle');
+    toggleBtn.addEventListener('click', () => {
+        const isShown = body.classList.toggle('show');
+        const icon = toggleBtn.querySelector('i');
+        if (icon) icon.className = isShown ? 'bi bi-caret-down-fill me-1' : 'bi bi-caret-right-fill me-1';
+        toggleBtn.textContent = isShown ? 'Tool Call (click to collapse)' : 'Tool Call (click to expand)';
+        toggleBtn.prepend(icon);
+    });
+
+    return wrapper;
+}
+
+// Upgrade any TOOLCALL text/blocks in a container into accordions
+export function upgradeToolcallBlocks(container) {
+    if (!container) return;
+
+    // Case 1: Lines starting with "TOOLCALL: { ... }" inside assistant messages
+    container.querySelectorAll('.message-assistant .message-content').forEach(contentEl => {
+        // If it already contains an accordion, skip
+        if (contentEl.querySelector('.toolcall-accordion')) return;
+
+        // Look for pre/code that contains TOOLCALL or plain text nodes
+        const html = contentEl.innerHTML;
+        if (html.includes('TOOLCALL:')) {
+            // Extract JSON after TOOLCALL:
+            const text = contentEl.textContent || '';
+            const idx = text.indexOf('TOOLCALL:');
+            if (idx !== -1) {
+                const after = text.slice(idx + 'TOOLCALL:'.length).trim();
+                // Try to find a JSON object
+                let jsonStr = after;
+                try {
+                    const firstBrace = after.indexOf('{');
+                    if (firstBrace !== -1) {
+                        const candidate = after.slice(firstBrace);
+                        const obj = JSON.parse(candidate);
+                        jsonStr = JSON.stringify(obj, null, 2);
+                    }
+                } catch (_) {}
+
+                // Rebuild content: keep text before TOOLCALL, insert accordion, drop raw TOOLCALL text
+                const beforeText = text.slice(0, idx);
+                contentEl.innerHTML = '';
+                if (beforeText.trim()) {
+                    const beforeDiv = document.createElement('div');
+                    beforeDiv.innerHTML = formatAssistantMessage(beforeText, true);
+                    contentEl.appendChild(beforeDiv);
+                }
+                contentEl.appendChild(buildToolcallAccordion(jsonStr));
+            }
+        }
+    });
+
+    // Highlight any new code blocks created
+    setTimeout(highlightCodeBlocks, 0);
+}
+
+// Build a collapsible card for Tool Result
+export function buildToolResultCard({ name = 'Tool', success = true, summary = '', details = '' }) {
+    const card = document.createElement('div');
+    card.className = 'toolresult-card card mb-2';
+
+    const header = document.createElement('div');
+    header.className = 'card-header d-flex justify-content-between align-items-center';
+    const title = document.createElement('div');
+    title.innerHTML = `<i class="bi bi-tools me-2"></i>${name}`;
+    const badge = document.createElement('span');
+    badge.className = `badge ${success ? 'bg-success' : 'bg-danger'}`;
+    badge.textContent = success ? 'Success' : 'Error';
+    header.appendChild(title);
+    header.appendChild(badge);
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+    const summaryEl = document.createElement('div');
+    summaryEl.className = 'mb-2';
+    summaryEl.textContent = summary || (success ? 'Tool executed successfully.' : 'Tool execution failed.');
+
+    const toggle = document.createElement('button');
+    toggle.className = 'btn btn-sm btn-outline-secondary';
+    toggle.innerHTML = '<i class="bi bi-caret-right-fill me-1"></i>Show details';
+
+    const detailsWrap = document.createElement('div');
+    detailsWrap.className = 'collapse';
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    code.className = 'hljs';
+    code.textContent = details || '';
+    pre.appendChild(code);
+    detailsWrap.appendChild(pre);
+
+    toggle.addEventListener('click', () => {
+        const shown = detailsWrap.classList.toggle('show');
+        const iconClass = shown ? 'bi bi-caret-down-fill me-1' : 'bi bi-caret-right-fill me-1';
+        toggle.innerHTML = `<i class="${iconClass}"></i>${shown ? 'Hide details' : 'Show details'}`;
+    });
+
+    body.appendChild(summaryEl);
+    if (details && details.trim().length > 0) {
+        body.appendChild(toggle);
+        body.appendChild(detailsWrap);
+    }
+
+    card.appendChild(header);
+    card.appendChild(body);
+
+    // highlight details if present
+    setTimeout(highlightCodeBlocks, 0);
+    return card;
+}
+
+// Upgrade any "Tool result" messages into cards
+export function upgradeToolResultBlocks(container) {
+    if (!container) return;
+    container.querySelectorAll('.message .message-content').forEach(contentEl => {
+        const text = (contentEl.textContent || '').trim();
+        if (!text.startsWith('Tool result')) return;
+        if (contentEl.querySelector('.toolresult-card')) return; // already upgraded
+
+        // Basic parse: first line as summary, rest as details
+        const lines = text.split(/\r?\n/);
+        const first = lines.shift() || 'Tool result';
+        const details = lines.join('\n');
+
+        // Try extract tool name from first line e.g., "Tool result (read_file): ..."
+        let name = 'Tool';
+        const m = first.match(/Tool result\s*\(([^)]+)\)/i);
+        if (m) name = m[1];
+
+        // success/error detection
+        const success = !/error|fail/i.test(first);
+
+        // Replace content with card
+        contentEl.innerHTML = '';
+        contentEl.appendChild(buildToolResultCard({ name, success, summary: first, details }));
     });
 }
 
