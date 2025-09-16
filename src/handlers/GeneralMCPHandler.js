@@ -9,6 +9,7 @@ import { RequestHandler } from './RequestHandler.js';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import CancellationManager from './CancellationManager.js';
 
 export class GeneralMCPHandler {
     constructor(apiKeys, workingDirectory, maxIterations = 15, options = {}) {
@@ -298,7 +299,21 @@ export class GeneralMCPHandler {
 
     // User request handling methods - delegate to RequestHandler
     async handleUserRequest(userInput, options = {}) {
-        return await this.requestHandler.handleUserRequest(userInput, options);
+        // create or reuse AbortController via CancellationManager if jobId provided
+        const jobId = options.jobId || `req-${Date.now()}`;
+        const { signal } = CancellationManager.create(jobId, { sessionId: this.sessionId, userInput });
+        try {
+            return await this.requestHandler.handleUserRequest(userInput, { ...options, jobId, signal });
+        } finally {
+            // job completes (success or error), remove controller to avoid leaks
+            CancellationManager.cancel(jobId);
+        }
+    }
+
+    // Expose stop API
+    stopJob(jobId) {
+        const stopped = CancellationManager.cancel(jobId);
+        return { success: stopped, jobId, message: stopped ? 'Stopped' : 'No active job' };
     }
 
     // Logging methods - delegate to LoggingHandler

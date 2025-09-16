@@ -28,9 +28,9 @@ export class GrokProvider extends BaseAIProvider {
 
         try {
             if (options.stream) {
-                return await this.streamChat(request, startTime, options.metadata);
+                return await this.streamChat(request, startTime, options.metadata, options.signal);
             } else {
-                return await this.normalChat(request, startTime, options.metadata);
+                return await this.normalChat(request, startTime, options.metadata, options.signal);
             }
         } catch (error) {
             let errorFinal = error;
@@ -52,12 +52,13 @@ export class GrokProvider extends BaseAIProvider {
         }
     }
 
-    async normalChat(request, startTime, metadata = {}) {
+    async normalChat(request, startTime, metadata = {}, signal) {
         const response = await axios.post(this.baseURL, request, {
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            signal
         });
 
         const result = this.normalizeResponse({
@@ -73,13 +74,14 @@ export class GrokProvider extends BaseAIProvider {
         return result;
     }
 
-    async streamChat(request, startTime, metadata = {}) {
+    async streamChat(request, startTime, metadata = {}, signal) {
         const response = await axios.post(this.baseURL, request, {
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json'
             },
-            responseType: 'stream'
+            responseType: 'stream',
+            signal
         });
 
         return new Promise((resolve, reject) => {
@@ -87,6 +89,10 @@ export class GrokProvider extends BaseAIProvider {
             let usage = null;
             const chunks = [];
 
+            if (signal) {
+                const onAbort = () => { try { response.data.destroy(new Error('Aborted')); } catch(_){} };
+                if (signal.aborted) onAbort(); else signal.addEventListener('abort', onAbort, { once: true });
+            }
             response.data.on('data', (chunk) => {
                 const lines = chunk.toString().split('\n');
                 

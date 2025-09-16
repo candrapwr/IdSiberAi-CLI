@@ -34,7 +34,7 @@ export class RequestHandler {
         return this.enableContextOptimization;
     }
 
-    async handleUserRequest(userInput) {
+    async handleUserRequest(userInput, { jobId, signal } = {}) {
         // Add user input to conversation history
         this.conversationHandler.addUserMessage(userInput);
 
@@ -72,6 +72,7 @@ export class RequestHandler {
                     // Use fallback if enabled
                     aiResponse = await this.aiManager.chatWithFallback(this.conversationHandler.getConversationHistory(), {
                         stream: this.streamMode,
+                        signal,
                         switchOnSuccess: true, // Switch to working provider automatically
                         metadata: {
                             userInput,
@@ -90,6 +91,7 @@ export class RequestHandler {
                     // Use normal chat without fallback
                     aiResponse = await this.aiManager.chat(this.conversationHandler.getConversationHistory(), {
                         stream: this.streamMode,
+                        signal,
                         metadata: {
                             userInput,
                             sessionId: this.sessionId,
