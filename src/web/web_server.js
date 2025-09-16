@@ -178,9 +178,11 @@ export class WebServer {
                 // Process the message
                 try {
                     const startTime = Date.now();
-                    const result = await this.mcpHandler.handleUserRequest(message);
+                    const jobId = `web-${socket.id}-${Date.now()}`;
+                    socket.currentJobId = jobId;
+                    const result = await this.mcpHandler.handleUserRequest(message, { jobId });
                     const endTime = Date.now();
-                    
+                    socket.currentJobId = null;
                     // Ensure typing indicator is turned off
                     socket.emit('assistant-typing', { typing: false });
                     
@@ -201,6 +203,19 @@ export class WebServer {
                     });
                     socket.emit('assistant-typing', { typing: false });
                 }
+            });
+
+            // Handle stop request
+            socket.on('stop', () => {
+                const jobId = socket.currentJobId;
+                if (!jobId) {
+                    socket.emit('stopped', { success: false, message: 'No active job' });
+                    return;
+                }
+                const res = this.mcpHandler.stopJob(jobId);
+                socket.emit('stopped', res);
+                // Also turn off typing indicator for UX
+                socket.emit('assistant-typing', { typing: false });
             });
             
             // Handle command execution

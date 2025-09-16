@@ -35,9 +35,9 @@ export class ClaudeProvider extends BaseAIProvider {
 
         try {
             if (options.stream) {
-                return await this.streamChat(request, startTime, options.metadata);
+                return await this.streamChat(request, startTime, options.metadata, options.signal);
             } else {
-                return await this.normalChat(request, startTime, options.metadata);
+                return await this.normalChat(request, startTime, options.metadata, options.signal);
             }
         } catch (error) {
 
@@ -78,13 +78,14 @@ export class ClaudeProvider extends BaseAIProvider {
         return { system, messages: claudeMessages };
     }
 
-    async normalChat(request, startTime, metadata = {}) {
+    async normalChat(request, startTime, metadata = {}, signal) {
         const response = await axios.post(this.baseURL, request, {
             headers: {
                 'x-api-key': this.apiKey,
                 'Content-Type': 'application/json',
                 'anthropic-version': '2023-06-01'
-            }
+            },
+            signal
         });
 
         const result = this.normalizeResponse({
@@ -100,20 +101,26 @@ export class ClaudeProvider extends BaseAIProvider {
         return result;
     }
 
-    async streamChat(request, startTime, metadata = {}) {
+    async streamChat(request, startTime, metadata = {}, signal) {
         const response = await axios.post(this.baseURL, request, {
             headers: {
                 'x-api-key': this.apiKey,
                 'Content-Type': 'application/json',
                 'anthropic-version': '2023-06-01'
             },
-            responseType: 'stream'
+            responseType: 'stream',
+            signal
         });
 
         return new Promise((resolve, reject) => {
             let fullMessage = '';
             let usage = null;
             const chunks = [];
+
+            if (signal) {
+                const onAbort = () => { try { response.data.destroy(new Error('Aborted')); } catch(_){} };
+                if (signal.aborted) onAbort(); else signal.addEventListener('abort', onAbort, { once: true });
+            }
 
             response.data.on('data', (chunk) => {
                 const lines = chunk.toString().split('\n');

@@ -18,6 +18,7 @@ class GeneralMCPCLI {
         this.isRunning = false;
         this.streamMode = false;
         this.streamBuffer = '';
+        this.activeJob = null;
     }
 
     async initialize() {
@@ -108,7 +109,11 @@ class GeneralMCPCLI {
                     console.log(chalk.gray(`🔄 Fallback enabled: Will try other providers if needed`));
                 }
                 
-                const result = await this.mcp.handleUserRequest(userInput);
+                // Create a cancellable job for this request
+                const jobId = `cli-${Date.now()}`;
+                this.activeJob = jobId;
+                const result = await this.mcp.handleUserRequest(userInput, { jobId });
+                this.activeJob = null;
                 const endTime = Date.now();
 
                 if (!this.streamMode) {
@@ -178,6 +183,9 @@ class GeneralMCPCLI {
             case '/stream':
                 await this.toggleStreamMode();
                 break;
+            case '/stop':
+                await this.stopActiveJob();
+                break;
                 
             case '/context':
             case '/ctx':
@@ -225,12 +233,25 @@ class GeneralMCPCLI {
                 console.log(chalk.yellow('👋 Exiting chat...'));
                 this.isRunning = false;
                 break;
+            case '/stop':
+                await this.stopActiveJob();
+                break;
             
             default:
                 console.log(chalk.red(`❌ Unknown command: ${command}`));
                 console.log(chalk.gray('Type /help for available commands'));
                 break;
         }
+    }
+
+    async stopActiveJob() {
+        if (!this.activeJob) {
+            console.log(chalk.yellow('⚠️ No active job to stop.'));
+            return;
+        }
+        const res = await this.mcp.stopJob(this.activeJob);
+        if (res.success) console.log(chalk.green(`🛑 Stopped job ${this.activeJob}`));
+        else console.log(chalk.red(`❌ Failed to stop: ${res.message}`));
     }
 
     // New AI management command handlers

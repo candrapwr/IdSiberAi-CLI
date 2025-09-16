@@ -245,6 +245,14 @@ export function setupDOMEventHandlers(socket) {
     }
     
     // Clear history button
+    const stopBtn = document.getElementById('stopBtn');
+    if (stopBtn) {
+        stopBtn.addEventListener('click', () => {
+            socket.emit('stop');
+        });
+    }
+
+    // Clear history button
     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
     if (clearHistoryBtn) {
         clearHistoryBtn.addEventListener('click', () => {
