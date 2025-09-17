@@ -12,7 +12,7 @@ export class GeminiProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'gemini-2.0-flash-lite';
+        return 'gemini-2.0-flash';
     }
 
     /**

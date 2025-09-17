@@ -182,6 +182,11 @@ export function formatAssistantMessage(content, stream = false) {
                 continue;
             }
 
+            const toolCallStr = line.match(/^\s*TOOLCALL\s*(.*)$/);
+            if (toolCallStr) {
+                continue;
+            }
+
             parts.push(`<div>${escapeHTML(line)}</div>`);
         }
         return parts.join('');

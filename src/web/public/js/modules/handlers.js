@@ -108,15 +108,14 @@ export function handleToolExecution(data) {
     systemMessageDiv.className = 'system-message';
     systemMessageDiv.innerHTML = `<i class="bi bi-tools me-2"></i>Tool <strong>${data.tool}</strong> ${data.result.success ? 'executed successfully' : 'failed'}`;
     document.getElementById('messagesContainer').appendChild(systemMessageDiv);
-    // Also render a richer Tool Result card
-    try {
-        const details = typeof data.result === 'object' ? JSON.stringify(data.result, null, 2) : (data.result?.message || '');
-        const summary = data.result?.message || (data.result.success ? 'Tool executed successfully' : (data.result.error || 'Tool failed'));
-        const card = buildToolResultCard({ name: data.tool, success: !!data.result.success, summary, details });
-        document.getElementById('messagesContainer').appendChild(card);
-    } catch(_) {}
 
-    // Only autoscroll if enabled (ui.js controls state); fallback safe
+    // try {
+    //     const details = typeof data.result === 'object' ? JSON.stringify(data.result, null, 2) : (data.result?.message || '');
+    //     const summary = data.result?.message || (data.result.success ? 'Tool executed successfully' : (data.result.error || 'Tool failed'));
+    //     const card = buildToolResultCard({ name: data.tool, success: !!data.result.success, summary, details });
+    //     document.getElementById('messagesContainer').appendChild(card);
+    // } catch(_) {}
+
     try {
         if (window.__autoScrollEnabled !== false) scrollToBottom();
     } catch (_) { scrollToBottom(); }
@@ -457,7 +456,7 @@ export function displayConversationHistory(history) {
         if (msg.role === 'user' || msg.role === 'assistant') {
             if(msg.role === 'user'){
                 if(msg.content.startsWith("Tool result")){
-                    addMessage(msg.role, `${msg.content.slice(0, 100)}...`, msg.metadata || {});
+                    addMessage('assistant', `${msg.content.slice(0, 10000)}...`, msg.metadata || {});
                 }else{
                     addMessage(msg.role, msg.content, msg.metadata || {});
                 }

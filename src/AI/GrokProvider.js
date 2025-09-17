@@ -12,7 +12,7 @@ export class GrokProvider extends BaseAIProvider {
     }
 
     getDefaultModel() {
-        return 'grok-3-mini';
+        return 'grok-code-fast';
     }
 
     async chat(messages, options = {}) {
