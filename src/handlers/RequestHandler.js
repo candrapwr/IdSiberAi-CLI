@@ -19,7 +19,11 @@ export class RequestHandler {
             this.toolCallHandler.setToolExecutionHandler(onToolExecution);
         }
     }
-    
+
+    setSessionId(sessionId) {
+        this.sessionId = sessionId;
+    }
+
     // Metode tambahan untuk mengatur tool execution handler
     setToolExecutionHandler(onToolExecution) {
         // Pastikan handler diteruskan ke ToolCallHandler

@@ -38,6 +38,7 @@ IdSiberAi-CLI/
 │   ├── conversation_YYYY-MM-DD.log # Conversation logs
 │   ├── errors_YYYY-MM-DD.log  # Error logs
 │   └── tools_YYYY-MM-DD.log   # Tool execution logs
+├── sessions/                  # Saved chat sessions (auto-generated)
 ├── node_modules/              # Node.js dependencies (auto-generated)
 └── src/                       # Source code directory
     ├── AI/                    # AI provider implementations

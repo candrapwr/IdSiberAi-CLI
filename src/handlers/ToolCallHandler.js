@@ -9,6 +9,10 @@ export class ToolCallHandler {
         this.aiManager = aiManager;
         this.onToolExecution = null;
     }
+
+    setSessionId(sessionId) {
+        this.sessionId = sessionId;
+    }
     
     // Set the tool execution handler
     setToolExecutionHandler(handler) {

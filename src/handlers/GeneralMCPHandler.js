@@ -6,6 +6,7 @@ import { ConversationHandler } from './ConversationHandler.js';
 import { ToolCallHandler } from './ToolCallHandler.js';
 import { LoggingHandler } from './LoggingHandler.js';
 import { RequestHandler } from './RequestHandler.js';
+import { SessionManager } from './SessionManager.js';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
@@ -13,7 +14,7 @@ import CancellationManager from './CancellationManager.js';
 
 export class GeneralMCPHandler {
     constructor(apiKeys, workingDirectory, maxIterations = 15, options = {}) {
-        this.sessionId = crypto.randomUUID();
+        this.sessionId = options.sessionId || crypto.randomUUID();
         this.aiManager = new AIManager(apiKeys, options.enableLogging !== false);
         this.tools = new GeneralTools(workingDirectory);
         this.logger = options.enableLogging !== false ? new Logger() : null;
@@ -22,7 +23,10 @@ export class GeneralMCPHandler {
         this.streamMode = options.streamMode || false;
         this.onStreamChunk = options.onStreamChunk || null;
         this.onToolExecution = options.onToolExecution || null;
-        
+        const sessionsDirectory = options.sessionsDirectory || process.env.SESSIONS_DIRECTORY || './sessions';
+        this.sessionsDirectory = sessionsDirectory;
+        this.sessionManager = new SessionManager({ sessionsDir: sessionsDirectory });
+
         // Context optimization settings
         this.enableContextOptimization = options.enableContextOptimization || 
                                         process.env.ENABLE_CONTEXT_OPTIMIZATION === 'true';
@@ -59,10 +63,12 @@ export class GeneralMCPHandler {
             this.onStreamChunk,
             this.onToolExecution
         );
-        
+
+        this.syncSessionId();
+
         // Pastikan requestHandler menggunakan context optimization setting yang sama
         this.requestHandler.setContextOptimizationEnabled(this.enableContextOptimization);
-        
+
         // Initialize the conversation with system prompt
         this.conversationHandler.initializeSystemPrompt(
             this.aiManager.getAvailableProviders(),
@@ -303,7 +309,19 @@ export class GeneralMCPHandler {
         const jobId = options.jobId || `req-${Date.now()}`;
         const { signal } = CancellationManager.create(jobId, { sessionId: this.sessionId, userInput });
         try {
-            return await this.requestHandler.handleUserRequest(userInput, { ...options, jobId, signal });
+            const result = await this.requestHandler.handleUserRequest(userInput, { ...options, jobId, signal });
+            await this.saveCurrentSession({
+                aiProvider: this.aiManager.currentProvider,
+                lastUserMessage: userInput,
+                lastAssistantMessage: result?.response || null
+            });
+            return result;
+        } catch (error) {
+            await this.saveCurrentSession({
+                aiProvider: this.aiManager.currentProvider,
+                lastUserMessage: userInput
+            }).catch(() => {});
+            throw error;
         } finally {
             // job completes (success or error), remove controller to avoid leaks
             CancellationManager.cancel(jobId);
@@ -332,6 +350,11 @@ export class GeneralMCPHandler {
     // Conversation management methods
     clearHistory() {
         this.conversationHandler.clearHistory();
+        void this.saveCurrentSession({
+            aiProvider: this.aiManager.currentProvider,
+            lastUserMessage: null,
+            lastAssistantMessage: null
+        });
     }
 
     getConversationHistory() {
@@ -387,12 +410,132 @@ export class GeneralMCPHandler {
     getWorkingDirectory() {
         return this.tools.getWorkingDirectory();
     }
-    
+
+    syncSessionId() {
+        if (this.toolCallHandler && typeof this.toolCallHandler.setSessionId === 'function') {
+            this.toolCallHandler.setSessionId(this.sessionId);
+        }
+        if (this.requestHandler && typeof this.requestHandler.setSessionId === 'function') {
+            this.requestHandler.setSessionId(this.sessionId);
+        }
+    }
+
+    async saveCurrentSession(metadata = {}) {
+        if (!this.sessionManager) {
+            return;
+        }
+
+        try {
+            const conversation = this.conversationHandler.getConversationHistory();
+            if (!conversation || conversation.length === 0) {
+                return;
+            }
+
+            const lastUser = [...conversation].reverse().find(message => message.role === 'user');
+            const lastAssistant = [...conversation].reverse().find(message => message.role === 'assistant');
+            const lastUserContent = lastUser?.content ?? null;
+            const lastAssistantContent = lastAssistant?.content ?? null;
+
+            const enrichedMetadata = {
+                aiProvider: metadata.aiProvider || this.aiManager.currentProvider,
+                lastUserMessage: metadata.lastUserMessage ?? lastUserContent,
+                lastAssistantMessage: metadata.lastAssistantMessage ?? lastAssistantContent,
+                messageCount: conversation.length,
+                ...metadata
+            };
+
+            await this.sessionManager.saveSession(this.sessionId, conversation, enrichedMetadata);
+        } catch (error) {
+            this.debug.error('Failed to save session', error);
+        }
+    }
+
+    async listSessions() {
+        if (!this.sessionManager) {
+            return [];
+        }
+        return await this.sessionManager.listSessions();
+    }
+
+    async loadSession(sessionId, options = {}) {
+        if (!this.sessionManager) {
+            return { success: false, error: 'Session manager not available' };
+        }
+
+        try {
+            const session = await this.sessionManager.loadSession(sessionId);
+            if (!Array.isArray(session.conversation) || session.conversation.length === 0) {
+                throw new Error('Session conversation is empty');
+            }
+
+            this.sessionId = session.sessionId || sessionId;
+            this.conversationHandler.setConversationHistory(session.conversation);
+            this.syncSessionId();
+
+            if (options.restoreProvider !== false && session.aiProvider && session.aiProvider !== this.aiManager.currentProvider) {
+                try {
+                    const switched = this.aiManager.setCurrentProvider(session.aiProvider);
+                    if (!switched) {
+                        this.debug.log(`AI provider ${session.aiProvider} not switched; keeping ${this.aiManager.currentProvider}`);
+                    }
+                } catch (error) {
+                    this.debug.error('Failed to restore AI provider from session', error);
+                }
+            }
+
+            await this.saveCurrentSession({
+                aiProvider: this.aiManager.currentProvider,
+                title: session.title
+            });
+
+            return {
+                success: true,
+                sessionId: this.sessionId,
+                title: session.title,
+                messageCount: session.conversation.length,
+                aiProvider: this.aiManager.currentProvider
+            };
+        } catch (error) {
+            this.debug.error('Failed to load session', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async deleteSession(sessionId) {
+        if (!this.sessionManager) {
+            return { success: false, error: 'Session manager not available' };
+        }
+        return await this.sessionManager.deleteSession(sessionId);
+    }
+
+    async startNewSession(options = {}) {
+        CancellationManager.cancelAll();
+        this.sessionId = crypto.randomUUID();
+        this.syncSessionId();
+
+        const conversation = this.conversationHandler.initializeSystemPrompt(
+            this.aiManager.getAvailableProviders(),
+            this.aiManager.currentProvider
+        );
+
+        await this.saveCurrentSession({
+            aiProvider: this.aiManager.currentProvider,
+            title: options.title
+        });
+
+        return {
+            success: true,
+            sessionId: this.sessionId,
+            messageCount: conversation.length,
+            aiProvider: this.aiManager.currentProvider
+        };
+    }
+
     // Session information
     getSessionInfo() {
         const aiInfo = this.aiManager.getProvidersInfo();
         const contextOptimizerStatus = this.conversationHandler.getContextOptimizerStatus();
-        
+
         return {
             sessionId: this.sessionId,
             streamMode: this.streamMode,
@@ -405,7 +548,8 @@ export class GeneralMCPHandler {
             availableAIProviders: this.aiManager.getAvailableProviders(),
             aiProvidersInfo: aiInfo,
             contextOptimization: contextOptimizerStatus,
-            workingDirectory: this.tools.getWorkingDirectory()
+            workingDirectory: this.tools.getWorkingDirectory(),
+            sessionsDirectory: this.sessionsDirectory
         };
     }
 }
