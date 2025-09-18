@@ -1,19 +1,19 @@
+// File: DatabaseTools.js
+
 import mysql from 'mysql2/promise';
-import { Pool } from 'pg';
+import { Pool, types } from 'pg'; // ← tambahkan 'types' di sini
 import chalk from 'chalk';
 import { ValidationHelper } from './ValidationHelper.js';
 
 /**
+ * Override parser kolom DATE (OID 1082) agar tidak dikonversi ke JS Date object
+ * Melainkan dikembalikan dalam bentuk string asli 'YYYY-MM-DD'
+ */
+types.setTypeParser(1082, (val) => val); // ← tambahkan ini
+
+/**
  * DatabaseTools - Kelas untuk operasi database SQL
  * Mendukung koneksi ke database MySQL dan PostgreSQL
- * 
- * Penggunaan: 
- *   executeQuery(query, database) - Menjalankan query SQL dengan parameter opsional database
- *   
- * Catatan Penting:
- *   - Menggunakan env vars DB_TYPE, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
- *   - Jika 'database' diberikan, akan override database dari env var DB_NAME
- *   - Eksekusi query akan menggunakan database default dari env kecuali diberikan parameter database
  */
 export class DatabaseTools {
   constructor() {
@@ -41,7 +41,7 @@ export class DatabaseTools {
   async #validateConfig() {
     const required = ['host', 'user', 'database'];
     const missing = required.filter(field => !this.config[this.dbType][field]);
-    
+
     if (missing.length > 0) {
       return {
         success: false,
@@ -55,27 +55,25 @@ export class DatabaseTools {
     try {
       const validation = await this.#validateConfig();
       if (!validation.success) return validation;
-      
-      // Jika database yang spesifik diberikan, gunakan database tersebut
-      // Alih-alih database default dari env
-      const config = {...this.config[this.dbType]};
+
+      const config = { ...this.config[this.dbType] };
       if (database) {
         console.log(chalk.blue(`🔄 Menggunakan database: ${database} (override default)`));
         config.database = database;
       }
-      
+
       console.log(chalk.blue(`🔌 Connecting to ${this.dbType} database: ${config.database}`));
-      
+
       if (this.dbType === 'mysql') {
         this.pool = await mysql.createPool(config);
       } else {
         this.pool = new Pool(config);
       }
-      
+
       // Test connection
       await this.pool.query('SELECT 1');
       console.log(chalk.green(`✅ Connected to ${this.dbType} database: ${config.database}`));
-      
+
       return { success: true };
     } catch (error) {
       return {
@@ -93,27 +91,24 @@ export class DatabaseTools {
    */
   async executeQuery(query, database = null) {
     try {
-      // Validate query
       if (!query || typeof query !== 'string') {
         return {
           success: false,
           error: 'Invalid query - must be a non-empty string'
         };
       }
-      
-      // Close koneksi yang sudah ada jika database berbeda
+
       if (this.pool && database) {
         await this.close();
       }
-      
-      // Connect if needed
+
       if (!this.pool) {
         const connection = await this.#connect(database);
         if (!connection.success) return connection;
       }
-      
+
       console.log(chalk.blue(`📝 Executing query: ${query.substring(0, 100)}${query.length > 100 ? '...' : ''}`));
-      
+
       let result;
       if (this.dbType === 'mysql') {
         const [rows] = await this.pool.query(query);
@@ -122,7 +117,7 @@ export class DatabaseTools {
         const { rows } = await this.pool.query(query);
         result = rows;
       }
-      
+
       return {
         success: true,
         data: result,

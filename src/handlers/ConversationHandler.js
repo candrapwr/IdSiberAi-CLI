@@ -96,7 +96,7 @@ TOOLCALL: {"action":"create_directory","parameters":{"dir_path":"project/src"}}
 
 ## Example of using the edit file tool (CORRECT - ONE TOOL):
 THINK: Directly apply edit, fallback if file missing
-TOOLCALL: {"action":"edit_file","parameters":{"file_path":"src/utils.js","edits":[{"oldText":"function oldName() {","newText":"function newName() {"}]}}
+TOOLCALL: {"action":"edit_file","parameters":{"file_path":"src/utils.js","edits":[{"oldText":"function oldName() {","newText":"function newName() {","oldText":"one","newText":"two"}]}}
 
 ## Example with multiple needs (CORRECT - STILL ONE TOOL):
 THINK: Search first, delete later
