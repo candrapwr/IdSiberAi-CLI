@@ -111,14 +111,64 @@ export function addMessage(role, content, metadata = {}) {
     }
 }
 
-// Add system message
+// Toast notifications
+let toastCounter = 0;
+
+function ensureToastContainer() {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'app-toast-container';
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
+function createToast(message, type = 'info', timeout = 3200) {
+    const container = ensureToastContainer();
+    const toast = document.createElement('div');
+    toastCounter += 1;
+    toast.dataset.toastId = `toast-${toastCounter}`;
+    toast.className = `app-toast ${type}`;
+
+    const iconMap = {
+        info: 'bi-info-circle',
+        success: 'bi-check-circle',
+        error: 'bi-exclamation-octagon'
+    };
+    const iconClass = iconMap[type] || iconMap.info;
+
+    toast.innerHTML = `
+        <span class="toast-icon"><i class="bi ${iconClass}"></i></span>
+        <div class="toast-body">${message}</div>
+        <button class="toast-close" aria-label="Close toast"><i class="bi bi-x"></i></button>
+    `;
+
+    const closeBtn = toast.querySelector('.toast-close');
+    closeBtn.addEventListener('click', () => dismissToast(toast));
+
+    container.appendChild(toast);
+
+    if (timeout > 0) {
+        setTimeout(() => dismissToast(toast), timeout);
+    }
+}
+
+function dismissToast(toast) {
+    if (!toast) return;
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(10px)';
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.parentElement.removeChild(toast);
+        }
+    }, 150);
+}
+
+// Add system message via toast
 export function addSystemMessage(message, type = 'info') {
-    const messagesContainer = document.getElementById('messagesContainer');
-    const systemMessageDiv = document.createElement('div');
-    systemMessageDiv.className = `system-message ${type === 'error' ? 'alert-danger' : ''}`;
-    systemMessageDiv.innerHTML = message;
-    messagesContainer.appendChild(systemMessageDiv);
-    scrollToBottom();
+    createToast(message, type);
 }
 
 // Format assistant message (convert markdown to HTML)
@@ -257,14 +307,14 @@ export function buildToolcallAccordion(jsonText) {
 
     const header = document.createElement('div');
     header.className = 'toolcall-header';
-    header.innerHTML = '<button class="btn btn-sm btn-outline-secondary toolcall-toggle"><i class="bi bi-caret-right-fill me-1"></i>Tool Call (click to expand)</button>';
+    header.innerHTML = '<button class="btn btn-sm btn-outline-secondary toolcall-toggle"><i class="bi bi-caret-down-fill me-1"></i>Tool Call (click to collapse)</button>';
 
     const body = document.createElement('div');
-    body.className = 'toolcall-body collapse';
+    body.className = 'toolcall-body collapse show';
     const pre = document.createElement('pre');
     const code = document.createElement('code');
     code.className = 'hljs language-json';
-    code.textContent = jsonText;
+    code.textContent = jsonText.replace(/\\n/g, '\n');
     pre.appendChild(code);
     body.appendChild(pre);
 
@@ -276,8 +326,7 @@ export function buildToolcallAccordion(jsonText) {
         const isShown = body.classList.toggle('show');
         const icon = toggleBtn.querySelector('i');
         if (icon) icon.className = isShown ? 'bi bi-caret-down-fill me-1' : 'bi bi-caret-right-fill me-1';
-        toggleBtn.textContent = isShown ? 'Tool Call (click to collapse)' : 'Tool Call (click to expand)';
-        toggleBtn.prepend(icon);
+        toggleBtn.innerHTML = `${icon ? icon.outerHTML : ''}${isShown ? 'Tool Call (click to collapse)' : 'Tool Call (click to expand)'}`;
     });
 
     return wrapper;
@@ -310,6 +359,7 @@ export function upgradeToolcallBlocks(container) {
                         jsonStr = JSON.stringify(obj, null, 2);
                     }
                 } catch (_) {}
+                jsonStr = jsonStr.replace(/\\n/g, '\n');
 
                 // Rebuild content: keep text before TOOLCALL, insert accordion, drop raw TOOLCALL text
                 const beforeText = text.slice(0, idx);

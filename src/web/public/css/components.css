@@ -64,34 +64,98 @@
 .provider-item {
     cursor: pointer;
     transition: all 0.2s ease;
-    border-radius: 8px;
+    border-radius: 10px;
     margin-bottom: 0.5rem;
     border: 1px solid var(--border-color);
-    background-color: var(--bg-card);
-    padding: 0.75rem;
+    background: linear-gradient(180deg, rgba(35,35,35,0.92), rgba(26,26,26,0.92));
+    padding: 0.65rem 0.75rem;
     color: var(--text-primary);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
 }
 
 .provider-item:hover {
-    background-color: var(--bg-card-hover);
+    background: linear-gradient(180deg, rgba(45,45,45,0.95), rgba(30,30,30,0.95));
     transform: translateY(-2px);
 }
 
 .provider-item.active {
-    background-color: var(--message-assistant-bg);
     border-color: var(--primary);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+}
+
+.provider-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.45rem;
+}
+
+.provider-main {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.provider-name {
+    font-size: 0.85rem;
+}
+
+.provider-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
     position: relative;
 }
 
-.provider-item.active:before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(to bottom, var(--gradient-start), var(--gradient-end));
-    border-radius: 4px 0 0 4px;
+.provider-status-dot.status-online {
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.provider-status-dot.status-offline {
+    background: linear-gradient(135deg, #f87171, #ef4444);
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+.provider-current {
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    color: white;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 0.2rem 0.6rem;
+    letter-spacing: 0.06em;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.45);
+}
+
+.provider-meta {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.provider-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+}
+
+.provider-meta-pill i {
+    font-size: 0.75rem;
+}
+
+.provider-meta-pill.danger {
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
 }
 
 /* System messages */
@@ -104,6 +168,82 @@
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
+}
+
+/* Toast notifications */
+.app-toast-container {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    z-index: 1080;
+    width: min(320px, calc(100vw - 2rem));
+    pointer-events: none;
+}
+
+.app-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.8rem 0.95rem;
+    border-radius: 12px;
+    background: rgba(28, 28, 30, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+    color: var(--text-primary);
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+    animation: toast-slide-in 0.25s ease-out;
+}
+
+.app-toast.info {
+    border-left: 4px solid #38bdf8;
+}
+
+.app-toast.success {
+    border-left: 4px solid #4ade80;
+}
+
+.app-toast.error {
+    border-left: 4px solid #f87171;
+}
+
+.app-toast .toast-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+    margin-top: 0.1rem;
+}
+
+.app-toast .toast-body {
+    flex: 1;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.app-toast .toast-close {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.app-toast .toast-close:hover {
+    color: var(--text-primary);
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) translateX(0);
+    }
 }
 
 /* Tool badges */

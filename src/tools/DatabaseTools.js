@@ -19,6 +19,10 @@ export class DatabaseTools {
   constructor() {
     this.validator = new ValidationHelper();
     this.dbType = process.env.DB_TYPE || 'mysql';
+    this.maxRows = Number.parseInt(process.env.DB_MAX_ROWS || '200', 10);
+    if (!Number.isFinite(this.maxRows) || this.maxRows <= 0) {
+      this.maxRows = 200;
+    }
     this.config = {
       mysql: {
         host: process.env.DB_HOST,
@@ -120,10 +124,12 @@ export class DatabaseTools {
 
       return {
         success: true,
-        data: result,
+        message: Array.isArray(result) && result.length > this.maxRows
+          ? `Query executed successfully (${result.length} results). Result set is large, showing first ${this.maxRows} rows only.`
+          : `Query executed successfully (${result?.length || 0} results)`,
+        data: Array.isArray(result) && result.length > this.maxRows ? result.slice(0, this.maxRows) : result,
         count: result?.length || 0,
-        query: query.substring(0, 100),
-        message: `Query executed successfully (${result?.length || 0} results)`
+        // query: query.substring(0, 100)
       };
     } catch (error) {
       console.error(chalk.red(`❌ Query failed: ${error.message}`));
