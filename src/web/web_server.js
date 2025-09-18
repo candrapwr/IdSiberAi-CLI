@@ -281,11 +281,15 @@ export class WebServer {
                         result = await this.mcpHandler.getAPIUsage();
                         break;
                         
-                        case 'get-working-directory':
-                            const directory = this.mcpHandler.getWorkingDirectory();
-                            result = { success: true, directory };
+                    case 'get-working-directory':
+                        const directory = this.mcpHandler.getWorkingDirectory();
+                        result = { success: true, directory };
+                    break;
+
+                        case 'get-session-info':
+                            result = { success: true, ...this.mcpHandler.getSessionInfo() };
                         break;
-                        
+
                     default:
                         result = { 
                             success: false, 

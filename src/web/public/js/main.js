@@ -1,7 +1,7 @@
 // Main application file
-import { setupSocketListeners, displayConversationHistory } from './modules/handlers.js';
+import { setupSocketListeners, displayConversationHistory, handleSessionInfo } from './modules/handlers.js';
 import { initializeTheme, setupDOMEventHandlers } from './modules/ui.js';
-import { fetchConversationHistory, showStats, testProviders, showWorkingDirectoryModal } from './modules/api.js';
+import { fetchConversationHistory, showStats, testProviders } from './modules/api.js';
 
 // Set up global variables
 const socket = io();
@@ -12,6 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set up global functions for cross-module access
     window.displayConversationHistory = displayConversationHistory;
+    window.refreshSessionInfo = () => {
+        fetch('/api/session')
+            .then(response => response.json())
+            .then(data => {
+                handleSessionInfo(data, socket);
+            })
+            .catch(error => {
+                console.error('Failed to refresh session info:', error);
+            });
+    };
     
     // Initialize theme
     initializeTheme();
@@ -49,11 +59,5 @@ function setupAdditionalHandlers() {
     const testProvidersBtn = document.getElementById('testProvidersBtn');
     if (testProvidersBtn) {
         testProvidersBtn.addEventListener('click', testProviders);
-    }
-    
-    // Working directory button
-    const workDirBtn = document.getElementById('workDirBtn');
-    if (workDirBtn) {
-        workDirBtn.addEventListener('click', showWorkingDirectoryModal);
     }
 }

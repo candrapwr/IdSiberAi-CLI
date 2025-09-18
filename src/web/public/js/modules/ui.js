@@ -466,7 +466,16 @@ export function setupDOMEventHandlers(socket) {
         });
     }
 
-    // Clear history button
+    // Sessions button
+    const sessionsBtn = document.getElementById('sessionsBtn');
+    if (sessionsBtn) {
+        sessionsBtn.addEventListener('click', () => {
+            import('./api.js').then(module => {
+                module.showSessionManager(socket);
+            });
+        });
+    }
+
     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
     if (clearHistoryBtn) {
         clearHistoryBtn.addEventListener('click', () => {
