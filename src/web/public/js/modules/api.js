@@ -31,6 +31,276 @@ export function fetchConversationHistory() {
         });
 }
 
+// Session management state
+let sessionsModalInstance = null;
+let sessionsModalEl = null;
+
+function getSessionsAlertEl() {
+    return sessionsModalEl?.querySelector('[data-role="sessions-alert"]');
+}
+
+function showSessionsAlert(message, type = 'info') {
+    const alertEl = getSessionsAlertEl();
+    if (!alertEl) return;
+    alertEl.className = `alert alert-${type}`;
+    alertEl.textContent = message;
+    alertEl.classList.remove('d-none');
+}
+
+function hideSessionsAlert() {
+    const alertEl = getSessionsAlertEl();
+    if (!alertEl) return;
+    alertEl.classList.add('d-none');
+    alertEl.textContent = '';
+}
+
+function setSessionsLoading(message = 'Loading sessions...') {
+    const container = document.getElementById('sessionsListContainer');
+    if (!container) return;
+    container.innerHTML = `
+        <div class="list-group-item text-center text-muted">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span class="ms-2">${message}</span>
+        </div>
+    `;
+}
+
+function renderSessionsList(sessions = [], socket) {
+    const container = document.getElementById('sessionsListContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!Array.isArray(sessions) || sessions.length === 0) {
+        container.innerHTML = `
+            <div class="list-group-item text-center text-muted">
+                <i class="bi bi-inbox me-2"></i>No saved sessions yet.
+            </div>
+        `;
+        return;
+    }
+
+    const sessionInfo = getSessionInfo();
+    const currentSessionId = sessionInfo?.sessionId;
+
+    const formatDate = (value) => {
+        if (!value) return 'Unknown time';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Unknown time';
+        return date.toLocaleString();
+    };
+
+    const formatPreview = (text) => {
+        if (!text) return '';
+        return text.trim().replace(/\s+/g, ' ').slice(0, 80);
+    };
+
+    sessions.forEach(session => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item';
+        const isCurrent = session.sessionId === currentSessionId;
+        if (isCurrent) {
+            item.classList.add('active');
+        }
+
+        const previewSource = formatPreview(session.lastUserMessage || session.lastAssistantMessage);
+        const providerMeta = session.aiProvider ? `<span class="me-3"><i class="bi bi-cpu me-1"></i>${session.aiProvider}</span>` : '';
+
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${session.title || 'Untitled Session'}</div>
+                    <div class="session-meta mt-1">
+                        <span class="me-3"><i class="bi bi-clock-history me-1"></i>${formatDate(session.updatedAt)}</span>
+                        ${providerMeta}
+                        <span><i class="bi bi-chat-dots me-1"></i>${session.messageCount || 0} messages</span>
+                    </div>
+                    ${previewSource ? `<div class="session-meta mt-1"><i class="bi bi-quote"></i> ${previewSource}</div>` : ''}
+                </div>
+                <div class="session-actions d-flex flex-column gap-2">
+                    <button class="btn btn-sm btn-outline-primary" data-action="load" data-session="${session.sessionId}" ${isCurrent ? 'disabled' : ''}>
+                        <i class="bi bi-upload me-1"></i>Load
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" data-action="delete" data-session="${session.sessionId}" ${isCurrent ? 'disabled' : ''}>
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(item);
+    });
+
+    container.querySelectorAll('[data-action="load"]').forEach(button => {
+        button.addEventListener('click', () => {
+            const sessionId = button.getAttribute('data-session');
+            if (sessionId) {
+                loadSession(sessionId, socket);
+            }
+        });
+    });
+
+    container.querySelectorAll('[data-action="delete"]').forEach(button => {
+        button.addEventListener('click', () => {
+            const sessionId = button.getAttribute('data-session');
+            if (!sessionId) return;
+            if (confirm('Delete this session? This action cannot be undone.')) {
+                deleteSession(sessionId, socket);
+            }
+        });
+    });
+}
+
+async function loadSession(sessionId, socket) {
+    try {
+        showSessionsAlert('Loading session...', 'info');
+        const response = await fetch('/api/sessions/load', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to load session');
+        }
+
+        showSessionsAlert(`Session loaded: ${data.title || data.sessionId}`, 'success');
+        if (typeof window.refreshSessionInfo === 'function') {
+            window.refreshSessionInfo();
+        }
+        fetchConversationHistory();
+        if (typeof window.addSystemMessage === 'function') {
+            window.addSystemMessage(`Loaded session <strong>${data.title || data.sessionId}</strong>`);
+        }
+        if (sessionsModalInstance) {
+            setTimeout(() => sessionsModalInstance.hide(), 400);
+        }
+    } catch (error) {
+        console.error('Failed to load session', error);
+        showSessionsAlert(error.message || 'Failed to load session', 'danger');
+    } finally {
+        loadSessionsList(socket, { silent: true });
+    }
+}
+
+async function deleteSession(sessionId, socket) {
+    try {
+        showSessionsAlert('Deleting session...', 'info');
+        const response = await fetch(`/api/sessions/${sessionId}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to delete session');
+        }
+        showSessionsAlert('Session deleted', 'success');
+        loadSessionsList(socket, { silent: true });
+    } catch (error) {
+        console.error('Failed to delete session', error);
+        showSessionsAlert(error.message || 'Failed to delete session', 'danger');
+    }
+}
+
+async function createSession(socket) {
+    const titleInput = sessionsModalEl?.querySelector('#sessionTitleInput');
+    const title = titleInput ? titleInput.value.trim() : '';
+
+    try {
+        showSessionsAlert('Starting new session...', 'info');
+        const response = await fetch('/api/sessions/new', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: title || undefined })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to create new session');
+        }
+
+        if (titleInput) {
+            titleInput.value = '';
+        }
+
+        showSessionsAlert('New session started', 'success');
+        if (typeof window.refreshSessionInfo === 'function') {
+            window.refreshSessionInfo();
+        }
+        fetchConversationHistory();
+        if (typeof window.addSystemMessage === 'function') {
+            window.addSystemMessage('Started a new session');
+        }
+        if (sessionsModalInstance) {
+            setTimeout(() => sessionsModalInstance.hide(), 400);
+        }
+    } catch (error) {
+        console.error('Failed to create session', error);
+        showSessionsAlert(error.message || 'Failed to create session', 'danger');
+    } finally {
+        loadSessionsList(socket, { silent: true });
+    }
+}
+
+function ensureSessionsListeners(socket) {
+    if (!sessionsModalEl || sessionsModalEl.dataset.sessionsListeners === 'true') {
+        return;
+    }
+
+    const createButton = sessionsModalEl.querySelector('#createSessionBtn');
+    if (createButton) {
+        createButton.addEventListener('click', () => createSession(socket));
+    }
+
+    const refreshButton = sessionsModalEl.querySelector('#refreshSessionsBtn');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', () => loadSessionsList(socket));
+    }
+
+    sessionsModalEl.dataset.sessionsListeners = 'true';
+}
+
+function loadSessionsList(socket, options = {}) {
+    const { silent = false } = options;
+    if (!silent) {
+        hideSessionsAlert();
+        setSessionsLoading();
+    }
+
+    fetch('/api/sessions')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load sessions');
+            }
+            renderSessionsList(data.sessions || [], socket);
+        })
+        .catch(error => {
+            console.error('Error fetching sessions:', error);
+            showSessionsAlert(error.message || 'Failed to load sessions', 'danger');
+        });
+}
+
+export function showSessionManager(socket) {
+    sessionsModalEl = document.getElementById('sessionsModal');
+    if (!sessionsModalEl) {
+        console.warn('Sessions modal not found in DOM');
+        return;
+    }
+
+    sessionsModalInstance = bootstrap.Modal.getInstance(sessionsModalEl) || new bootstrap.Modal(sessionsModalEl);
+
+    hideSessionsAlert();
+    const titleInput = sessionsModalEl.querySelector('#sessionTitleInput');
+    if (titleInput) {
+        titleInput.value = '';
+    }
+
+    ensureSessionsListeners(socket);
+    loadSessionsList(socket);
+
+    sessionsModalInstance.show();
+}
+
 // Organize tools by category
 function organizeToolsByCategory(tools) {
     // Define tool categories

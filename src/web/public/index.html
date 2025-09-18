@@ -63,6 +63,9 @@
                 
                 <div class="sidebar-section mt-auto">
                     <div class="d-grid gap-2">
+                        <button class="btn btn-outline-light btn-sm" id="sessionsBtn">
+                            <i class="bi bi-collection me-2"></i>Sessions
+                        </button>
                         <button class="btn btn-outline-info btn-sm" id="workDirBtn">
                             <i class="bi bi-folder me-2"></i>Working Directory
                         </button>
@@ -190,6 +193,51 @@
     </div>
     
     <!-- Modals -->
+    <div class="modal fade" id="sessionsModal" tabindex="-1" aria-labelledby="sessionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sessionsModalLabel">
+                        <i class="bi bi-collection me-2"></i>Session Manager
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert d-none" data-role="sessions-alert"></div>
+                    <div class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div><i class="bi bi-plus-circle me-2"></i>Start New Session</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="sessionTitleInput" placeholder="Optional session title">
+                                <button class="btn btn-primary" type="button" id="createSessionBtn">
+                                    <i class="bi bi-play-circle me-1"></i>Start
+                                </button>
+                            </div>
+                            <div class="form-text">Leave blank to auto-generate a title from the first message.</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Saved Sessions</h6>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" id="refreshSessionsBtn">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                    <div id="sessionsListContainer" class="list-group sessions-list" style="max-height: 380px; overflow-y: auto;">
+                        <div class="list-group-item text-center text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span class="ms-2">Loading sessions...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">

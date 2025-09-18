@@ -184,6 +184,35 @@
     font-size: 0.8rem;
     color: var(--text-muted);
 }
+
+/* Session manager */
+.sessions-list .list-group-item {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.sessions-list .list-group-item:hover {
+    background-color: var(--bg-card-hover);
+    transform: translateY(-2px);
+}
+
+.sessions-list .list-group-item.active {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.sessions-list .session-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.sessions-list .session-actions .btn {
+    min-width: 72px;
+}
 .toolcall-accordion { 
   margin-top: 10px; 
   background: linear-gradient(180deg, rgba(30,30,30,0.95), rgba(25,25,25,0.95)); 
