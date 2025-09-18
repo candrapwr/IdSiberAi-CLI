@@ -57,7 +57,7 @@ class GeneralMCPCLI {
             `${chalk.green.bold('💬 CHAT MODE ACTIVATED')}\n\n` +
             `${chalk.cyan('Ask me anything!')} I can help with ${chalk.yellow('files')}, ${chalk.yellow('code')}, ${chalk.yellow('automation')}, and more.\n\n` +
             `${chalk.magenta.bold('AI Commands:')} ${chalk.magenta('/ai')}, ${chalk.magenta('/switch')}, ${chalk.magenta('/test')}, ${chalk.magenta('/providers')}\n` +
-            `${chalk.blue.bold('Other Commands:')} ${chalk.blue('/help')}, ${chalk.blue('/tools')}, ${chalk.blue('/logs')}, ${chalk.blue('/stream')}, ${chalk.blue('/stats')}, ${chalk.blue('/clear')}, ${chalk.blue('/history')}, ${chalk.blue('/exit')}`,
+            `${chalk.blue.bold('Other Commands:')} ${chalk.blue('/help')}, ${chalk.blue('/tools')}, ${chalk.blue('/logs')}, ${chalk.blue('/stream')}, ${chalk.blue('/stats')}, ${chalk.blue('/clear')}, ${chalk.blue('/history')}, ${chalk.blue('/sessions')}, ${chalk.blue('/exit')}`,
             {
                 padding: 1,
                 margin: { top: 1, bottom: 1 },
@@ -205,7 +205,11 @@ class GeneralMCPCLI {
             case '/history':
                 this.showHistory();
                 break;
-                
+
+            case '/sessions':
+                await this.manageSessions();
+                break;
+
             case '/workdir':
                 await this.changeWorkingDirectory();
                 break;
@@ -447,6 +451,190 @@ class GeneralMCPCLI {
         } else {
             console.log(chalk.red(`❌ Error: ${result.error}`));
         }
+    }
+
+    async manageSessions() {
+        console.log(chalk.cyan.bold('\n🗂️  Session Manager'));
+        console.log(chalk.gray('='.repeat(50)));
+
+        const formatDate = (value) => {
+            if (!value) return 'Unknown time';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return 'Unknown time';
+            }
+            return date.toLocaleString();
+        };
+
+        const formatPreview = (text) => {
+            if (!text) return '';
+            return text.trim().replace(/\s+/g, ' ').slice(0, 60);
+        };
+
+        const createNewSessionFlow = async () => {
+            const { title } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'title',
+                    message: 'Optional session title (leave blank to auto-generate):',
+                    default: ''
+                }
+            ]);
+
+            const result = await this.mcp.startNewSession({ title: title.trim() || undefined });
+            if (result.success) {
+                console.log(chalk.green(`✅ Started new session (${result.sessionId.substring(0, 8)}...)`));
+            } else {
+                console.log(chalk.red(`❌ Failed to start new session: ${result.error || 'Unknown error'}`));
+            }
+        };
+
+        const deleteSessionFlow = async (sessions, currentSessionId) => {
+            const deletable = sessions.filter(session => session.sessionId !== currentSessionId);
+
+            if (deletable.length === 0) {
+                console.log(chalk.yellow('⚠️ No other sessions available to delete.'));
+                return;
+            }
+
+            const { target } = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'target',
+                    message: 'Select a session to delete:',
+                    choices: [
+                        ...deletable.map(session => ({
+                            name: `${session.title || 'Untitled Session'} (${formatDate(session.updatedAt)})`,
+                            value: session.sessionId
+                        })),
+                        new inquirer.Separator(),
+                        { name: '⬅️ Cancel', value: '__cancel' }
+                    ]
+                }
+            ]);
+
+            if (target === '__cancel') {
+                return;
+            }
+
+            const { confirmed } = await inquirer.prompt([
+                {
+                    type: 'confirm',
+                    name: 'confirmed',
+                    message: 'Are you sure you want to delete this session?',
+                    default: false
+                }
+            ]);
+
+            if (!confirmed) {
+                console.log(chalk.yellow('⚠️ Session deletion cancelled.'));
+                return;
+            }
+
+            const result = await this.mcp.deleteSession(target);
+            if (result.success) {
+                console.log(chalk.green('✅ Session deleted.'));
+            } else {
+                console.log(chalk.red(`❌ Failed to delete session: ${result.error || 'Unknown error'}`));
+            }
+        };
+
+        while (true) {
+            const sessionInfo = this.mcp.getSessionInfo();
+            const sessions = await this.mcp.listSessions();
+
+            if (!sessions || sessions.length === 0) {
+                console.log(chalk.gray('No saved sessions yet.'));
+
+                const { action } = await inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'action',
+                        message: 'Choose an action:',
+                        choices: [
+                            { name: '➕ Start a new session', value: 'new' },
+                            { name: '⬅️ Back to chat', value: 'back' }
+                        ]
+                    }
+                ]);
+
+                if (action === 'new') {
+                    await createNewSessionFlow();
+                    continue;
+                }
+
+                break;
+            }
+
+            const choices = sessions.map(session => {
+                const isCurrent = session.sessionId === sessionInfo.sessionId;
+                const prefix = isCurrent ? '⭐' : ' ';
+                const updatedAt = formatDate(session.updatedAt);
+                const provider = session.aiProvider ? ` | ${session.aiProvider}` : '';
+                const previewSource = formatPreview(session.lastUserMessage || session.lastAssistantMessage);
+                const previewText = previewSource ? ` — ${previewSource}` : '';
+                const title = session.title || 'Untitled Session';
+
+                return {
+                    name: `${prefix} ${title}${provider} (${updatedAt})${previewText}`,
+                    value: session.sessionId,
+                    short: title,
+                    disabled: session.error ? 'Corrupted session' : false
+                };
+            });
+
+            const menuChoices = [
+                ...choices,
+                new inquirer.Separator(),
+                { name: '➕ Start new session', value: '__new' },
+                { name: '🗑️ Delete a session', value: '__delete' },
+                { name: '⬅️ Back to chat', value: '__back' }
+            ];
+
+            const { selection } = await inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'selection',
+                    message: 'Select a session to continue:',
+                    choices: menuChoices
+                }
+            ]);
+
+            if (selection === '__back') {
+                break;
+            }
+
+            if (selection === '__new') {
+                await createNewSessionFlow();
+                continue;
+            }
+
+            if (selection === '__delete') {
+                await deleteSessionFlow(sessions, sessionInfo.sessionId);
+                continue;
+            }
+
+            if (selection === sessionInfo.sessionId) {
+                console.log(chalk.yellow('⚠️ You are already using this session.'));
+                continue;
+            }
+
+            const picked = sessions.find(session => session.sessionId === selection);
+            if (picked?.error) {
+                console.log(chalk.red('❌ Cannot load a corrupted session file.'));
+                continue;
+            }
+
+            const result = await this.mcp.loadSession(selection);
+            if (result.success) {
+                console.log(chalk.green(`✅ Loaded session "${picked?.title || result.sessionId}"`));
+                console.log(chalk.gray(`Messages: ${result.messageCount} | AI Provider: ${result.aiProvider || 'current'}`));
+            } else {
+                console.log(chalk.red(`❌ Failed to load session: ${result.error}`));
+            }
+        }
+
+        console.log(chalk.gray('-'.repeat(50)));
     }
 
     async toggleStreamMode() {
@@ -785,6 +973,7 @@ class GeneralMCPCLI {
         console.log('  /stats    - Show usage statistics');
         console.log('  /clear    - Clear conversation history');
         console.log('  /history  - Show conversation history');
+        console.log('  /sessions - Manage saved sessions');
         console.log('  /workdir  - Change working directory');
         
         console.log(chalk.yellow('\nAI Management Commands:'));

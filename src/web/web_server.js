@@ -63,7 +63,43 @@ export class WebServer {
             this.mcpHandler.clearHistory();
             res.json({ success: true, message: 'Conversation history cleared' });
         });
-        
+
+        // Session management routes
+        this.app.get('/api/sessions', async (req, res) => {
+            try {
+                const sessions = await this.mcpHandler.listSessions();
+                res.json({ success: true, sessions });
+            } catch (error) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        this.app.post('/api/sessions/load', async (req, res) => {
+            const { sessionId } = req.body || {};
+            if (!sessionId) {
+                return res.status(400).json({ success: false, error: 'sessionId is required' });
+            }
+
+            const result = await this.mcpHandler.loadSession(sessionId);
+            res.status(result.success ? 200 : 400).json(result);
+        });
+
+        this.app.post('/api/sessions/new', async (req, res) => {
+            const { title } = req.body || {};
+            const result = await this.mcpHandler.startNewSession({ title });
+            res.status(result.success ? 200 : 400).json(result);
+        });
+
+        this.app.delete('/api/sessions/:sessionId', async (req, res) => {
+            const { sessionId } = req.params;
+            if (!sessionId) {
+                return res.status(400).json({ success: false, error: 'sessionId is required' });
+            }
+
+            const result = await this.mcpHandler.deleteSession(sessionId);
+            res.status(result.success ? 200 : 400).json(result);
+        });
+
         // API route to switch AI provider
         this.app.post('/api/switch-provider', async (req, res) => {
             const { provider } = req.body;

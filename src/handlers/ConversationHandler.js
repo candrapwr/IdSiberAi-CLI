@@ -230,7 +230,26 @@ ${JSON.stringify(this.dbConfig)}
     resetContextOptimizationStats() {
         return this.contextOptimizer.resetStats();
     }
-    
+
+    /**
+     * Replace entire conversation history with provided messages
+     * @param {Array} messages
+     */
+    setConversationHistory(messages = []) {
+        if (!Array.isArray(messages) || messages.length === 0) {
+            throw new Error('Conversation history must include at least one message');
+        }
+
+        const firstMessage = messages[0];
+        if (!firstMessage || firstMessage.role !== 'system') {
+            throw new Error('Conversation history must start with a system message');
+        }
+
+        // clone to avoid accidental mutation from outside
+        this.conversationHistory = messages.map(message => ({ ...message }));
+        return this.conversationHistory;
+    }
+
     /**
      * Mendapatkan status konteks optimasi
      */

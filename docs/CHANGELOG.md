@@ -1,5 +1,14 @@
 # 📝 Changelog
 
+## Unreleased
+
+### ✨ New Features
+- **Session Persistence** - Save, browse, and resume chat sessions directly from the CLI session manager.
+
+### 🔧 Improvements
+- **Session APIs** - Added REST endpoints for listing, loading, creating, and deleting sessions.
+- **Workspace Hygiene** - Session data now stored in a dedicated `sessions/` directory (git ignored).
+
 ## v2.1.0 (Latest) - Multi-AI & Cloud Edition
 *Released: January 2025*
 
