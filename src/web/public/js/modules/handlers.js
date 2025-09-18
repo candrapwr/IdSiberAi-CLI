@@ -13,9 +13,11 @@ let toolcallActive = false;
 let toolcallStartIndex = -1;
 let toolcallCodeEl = null;
 let lastRenderedIndex = 0;
+let activeSocket = null;
 
 // Setup Socket.io listeners
 export function setupSocketListeners(socket) {
+    activeSocket = socket;
     // Session info
     socket.on('session-info', (data) => handleSessionInfo(data, socket));
     
@@ -75,11 +77,22 @@ export function handleSessionInfo(data, socket) {
     currentProvider = data.currentAIProvider;
     
     // Update session info display
-    document.getElementById('currentProvider').innerHTML = `<i class='bi bi-lightning'></i> <strong>Provider:</strong> <span class="text-primary">${data.currentAIProvider}</span>`;
-    document.getElementById('sessionId').innerHTML = `<i class='bi bi-file-earmark-text'></i> <strong>Session:</strong> <span class='text-primary'>${data.sessionId.substring(0, 8)}...</span>`;
+    const providerEl = document.getElementById('currentProvider');
+    if (providerEl) {
+        providerEl.innerHTML = `<i class='bi bi-lightning'></i> <strong>Provider:</strong> <span class="text-primary">${data.currentAIProvider}</span>`;
+    }
+    const sessionEl = document.getElementById('sessionId');
+    if (sessionEl) {
+        sessionEl.innerHTML = `<i class='bi bi-file-earmark-text'></i> <strong>Session:</strong> <span class='text-primary'>${data.sessionId.substring(0, 8)}...</span>`;
+    }
     
     // Populate providers list
-    populateProvidersList(data.availableAIProviders, data.aiProvidersInfo, data.currentAIProvider, socket);
+    populateProvidersList(
+        data.availableAIProviders,
+        data.aiProvidersInfo,
+        data.currentAIProvider,
+        socket || activeSocket
+    );
     
     // Populate tools list
     if (data.toolsCount > 0) {
@@ -178,7 +191,7 @@ export function handleStreamChunk(data) {
                     titleEl.innerHTML = '<span>Tool Call</span>';
                     const toolcallToggleBtn = document.createElement('button');
                     toolcallToggleBtn.className = 'btn btn-sm btn-outline-secondary toolcall-toggle';
-                    toolcallToggleBtn.innerHTML = '<i class="bi bi-caret-right-fill me-1"></i>Click to expand';
+                    toolcallToggleBtn.innerHTML = '<i class="bi bi-caret-down-fill me-1"></i>Click to collapse';
                     const loadingEl = document.createElement('span');
                     loadingEl.className = 'toolcall-loading ms-2';
                     loadingEl.innerHTML = '<span class="spinner-border spinner-border-sm text-secondary" role="status" aria-hidden="true"></span>';
@@ -186,7 +199,7 @@ export function handleStreamChunk(data) {
                     header.appendChild(toolcallToggleBtn);
                     header.appendChild(loadingEl);
                     const body = document.createElement('div');
-                    body.className = 'toolcall-body collapse';
+                    body.className = 'toolcall-body collapse show';
                     const pre = document.createElement('pre');
                     const code = document.createElement('code');
                     code.className = 'hljs language-json';
@@ -228,6 +241,7 @@ export function handleStreamChunk(data) {
                         rendered = JSON.stringify(obj, null, 2);
                     }
                 } catch (_) {}
+                rendered = rendered.replace(/\\n/g, '\n');
                 toolcallCodeEl.textContent = rendered;
                 if (window.hljs && window.hljs.highlightElement) {
                     window.hljs.highlightElement(toolcallCodeEl);
@@ -312,42 +326,50 @@ export function handleTypingIndicator(data) {
 function populateProvidersList(providers, providersInfo, currentProvider, socket) {
     const providersList = document.getElementById('providersList');
     providersList.innerHTML = '';
-    
+
     providers.forEach(provider => {
-        const providerInfo = providersInfo[provider];
+        const providerInfo = providersInfo[provider] || {};
         const isActive = provider === currentProvider;
-        const statusClass = providerInfo.isActive ? 'text-success' : 'text-muted';
-        const statusIcon = providerInfo.isActive ? 'bi-check-circle-fill' : 'bi-dash-circle';
-        
+        const statusDot = providerInfo.isActive ? 'status-online' : 'status-offline';
+        const statusLabel = providerInfo.isActive ? 'Available' : 'Unavailable';
+
+        const metaPills = [];
+        if (providerInfo.defaultModel) {
+            metaPills.push(`<span class="provider-meta-pill"><i class="bi bi-cpu"></i>${providerInfo.defaultModel}</span>`);
+        }
+
         const item = document.createElement('div');
         item.className = `provider-item ${isActive ? 'active' : ''}`;
         item.dataset.provider = provider;
         item.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="bi ${statusIcon} ${statusClass} me-2"></i>
-                    ${provider}
+            <div class="provider-header">
+                <div class="provider-main">
+                    <span class="provider-status-dot ${statusDot}" title="${statusLabel}"></span>
+                    <span class="provider-name">${provider}</span>
                 </div>
-                ${isActive ? '<span class="badge bg-primary">Current</span>' : ''}
+                ${isActive ? '<span class="provider-current">Current</span>' : ''}
             </div>
-            <div class="small session-details">
-                <i class='bi bi-file-earmark-text'></i> ${providerInfo.defaultModel}
-            </div>
+            ${metaPills.length ? `<div class="provider-meta">${metaPills.join('')}</div>` : ''}
         `;
-        
-        // Add click event to switch provider
+
         item.addEventListener('click', () => {
             if (provider !== currentProvider) {
                 switchProvider(provider, socket);
             }
         });
-        
+
         providersList.appendChild(item);
     });
 }
 
 // Switch provider
 function switchProvider(provider, socket) {
+    const active = socket || activeSocket;
+    if (!active) {
+        console.error('Socket connection unavailable, cannot switch provider');
+        addSystemMessage('Cannot switch provider: socket unavailable', 'error');
+        return;
+    }
     // Show loading state
     const providerItems = document.querySelectorAll('.provider-item');
     providerItems.forEach(item => {
@@ -358,15 +380,13 @@ function switchProvider(provider, socket) {
         }
     });
     
-    // Add system message indicating switch
-    addSystemMessage(`Switching to ${provider} AI provider...`);
-    
     // Send switch request
-    socket.emit('switch-provider', { provider });
+    active.emit('switch-provider', { provider });
 }
 
 // Handle provider switched
 export function handleProviderSwitched(data, socket) {
+    const active = socket || activeSocket;
     if (data.success) {
         // Update current provider
         currentProvider = data.currentProvider;
@@ -382,7 +402,9 @@ export function handleProviderSwitched(data, socket) {
     }
     
     // Request updated session info
-    socket.emit('execute-command', { command: 'get-session-info' });
+    if (active) {
+        active.emit('execute-command', { command: 'get-session-info' });
+    }
 }
 
 // Handle command result
@@ -405,7 +427,7 @@ export function handleCommandResult(data) {
             
         case 'get-session-info':
             if (result.success) {
-                handleSessionInfo(result);
+                handleSessionInfo(result, activeSocket);
             }
             break;
     }
@@ -456,7 +478,7 @@ export function displayConversationHistory(history) {
         if (msg.role === 'user' || msg.role === 'assistant') {
             if(msg.role === 'user'){
                 if(msg.content.startsWith("Tool result")){
-                    addMessage('assistant', `${msg.content.slice(0, 10000)}...`, msg.metadata || {});
+                    addMessage('assistant', `${msg.content.slice(0, 10000000)}`, msg.metadata || {});
                 }else{
                     addMessage(msg.role, msg.content, msg.metadata || {});
                 }

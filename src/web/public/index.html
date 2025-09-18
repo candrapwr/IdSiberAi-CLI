@@ -25,18 +25,6 @@
                 </div>
                 
                 <div class="sidebar-section">
-                    <div class="session-card">
-                        <div class="session-card-title">
-                            <i class="bi bi-info-circle"></i>Session Info
-                        </div>
-                        <div class="session-details">
-                            <div id="currentProvider">Loading...</div>
-                            <div id="sessionId">Session: Loading...</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="sidebar-section">
                     <div class="sidebar-section-header">
                         <div><i class="bi bi-cpu me-2"></i>AI Providers</div>
                         <button class="btn btn-sm btn-outline-light" id="testProvidersBtn" title="Test all providers">
@@ -192,6 +180,9 @@
         </div>
     </div>
     
+    <!-- Toast container -->
+    <div id="toastContainer" class="app-toast-container"></div>
+
     <!-- Modals -->
     <div class="modal fade" id="sessionsModal" tabindex="-1" aria-labelledby="sessionsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
