@@ -82,6 +82,7 @@ You are a concise, action-oriented AI assistant with multiple tool capabilities.
 - execute_query(query, database): Execute SQL query with optional database parameter. If database is not provided, uses the default database from environment variables.
 
 ${(this.toolsInternetEnabled)? `## INTERNET OPERATIONS TOOLS
+- internet_search(query, options): Perform a live search, supported engine (duckduckgo) and return top organic results. Gunakan dorking operators seperti site:, intitle:, inurl:, filetype:, intext:, "frasa eksak", -kata, OR untuk query lebih presisi. Contoh: node.js current version site:nodejs.org
 - access_url(url): Access and retrieve content from the specified URL.`:``}
 
 # Response rules
@@ -109,6 +110,10 @@ Please, what can I help you with....
 THINK: Need to create dir and write file.
 TOOLCALL: {"action":"create_directory"}
 TOOLCALL: {"action":"write_file"}  // FORBIDDEN - only one per response!
+
+## Example of using the internet serach tool (CORRECT - ONE TOOL):
+THINK: Search first, delete later
+TOOLCALL: {"action":"internet_search","parameters":{"query":"news today","options":{"engine":"bing","limit":5}}}
 
 ## The following is configuration information for the database name and database type on this system:
 ${JSON.stringify(this.dbConfig)}

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import chalk from 'chalk';
+import puppeteer from 'puppeteer';
 import { ValidationHelper } from './ValidationHelper.js';
 import * as cheerio from 'cheerio';
 
@@ -18,12 +19,14 @@ export class InternetTools {
     }
 
     async accessUrl(url, options = {}) {
-        // Auto-extract content option (default: true)
         const shouldExtract = options.extractContent !== false;
-        // Content length limit in characters (default: 50000 ~ approx 12500 tokens)
-        const contentLimit = options.contentLimit || 2000;
+        const contentLimit = options.contentLimit || 10000;
+        let browser;
+        let page;
+        let requestHandler;
+        let interceptionEnabled = false;
+
         try {
-            // Validasi URL
             if (!url || typeof url !== 'string') {
                 return {
                     success: false,
@@ -31,7 +34,6 @@ export class InternetTools {
                 };
             }
 
-            // Validasi format URL
             let parsedUrl;
             try {
                 parsedUrl = new URL(url);
@@ -42,7 +44,6 @@ export class InternetTools {
                 };
             }
 
-            // Security checks (opsional)
             if (this.blockedDomains.includes(parsedUrl.hostname)) {
                 return {
                     success: false,
@@ -57,125 +58,254 @@ export class InternetTools {
                 };
             }
 
-            // Konfigurasi axios
-            const axiosConfig = {
-                method: options.method || 'GET',
-                url: url,
-                timeout: options.timeout || 30000,
-                maxContentLength: options.maxContentLength || 10 * 1024 * 1024, // 10MB
-                headers: {
-                    'User-Agent': options.userAgent || 'IdSiberAi-CLI/2.0.0',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1',
-                    ...options.headers
-                },
-                responseType: options.responseType || 'text',
-                validateStatus: function (status) {
-                    return status >= 200 && status < 400; // Terima status 2xx dan 3xx
-                }
+            const method = (options.method || 'GET').toUpperCase();
+            const launchOptions = {
+                headless: options.headless ?? true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox', ...(options.launchArgs || [])]
             };
 
-            // Tambahkan data untuk POST/PUT requests
-            if (options.data && (options.method === 'POST' || options.method === 'PUT')) {
-                axiosConfig.data = options.data;
+            if (options.executablePath) {
+                launchOptions.executablePath = options.executablePath;
+            }
+
+            if (options.defaultViewport) {
+                launchOptions.defaultViewport = options.defaultViewport;
+            }
+
+            browser = await puppeteer.launch(launchOptions);
+            page = await browser.newPage();
+
+            if (options.viewport && typeof options.viewport === 'object') {
+                await page.setViewport(options.viewport);
+            }
+
+            const userAgent = options.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            await page.setUserAgent(userAgent);
+
+            const baseHeaders = {
+                'Accept': options.accept || 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': options.acceptLanguage || 'en-US,en;q=0.9',
+                ...options.headers
+            };
+
+            await page.setExtraHTTPHeaders(baseHeaders);
+
+            if (method !== 'GET') {
+                interceptionEnabled = true;
+                await page.setRequestInterception(true);
+
+                requestHandler = request => {
+                    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+                        const overrides = {
+                            method,
+                            headers: {
+                                ...request.headers(),
+                                ...baseHeaders
+                            }
+                        };
+
+                        if (options.data) {
+                            overrides.postData = typeof options.data === 'string'
+                                ? options.data
+                                : JSON.stringify(options.data);
+
+                            const headerKey = Object.keys(overrides.headers).find(key => key.toLowerCase() === 'content-type');
+                            if (!headerKey) {
+                                overrides.headers['Content-Type'] = 'application/json';
+                            }
+                        }
+
+                        request.continue(overrides);
+                        page.off('request', requestHandler);
+                    } else {
+                        request.continue();
+                    }
+                };
+
+                page.on('request', requestHandler);
             }
 
             console.log(chalk.blue(`🌐 Accessing URL: ${url}`));
-            
-            // Eksekusi request
+
             const startTime = Date.now();
-            const response = await axios(axiosConfig);
+            const response = await page.goto(url, {
+                waitUntil: options.waitUntil || 'networkidle2',
+                timeout: options.timeout || 30000
+            });
             const duration = Date.now() - startTime;
 
-            // Process response
-            let content = response.data;
-            let contentType = response.headers['content-type'] || '';
-            let contentLength = response.headers['content-length'] || Buffer.from(content).length;
-            let originalSize = content.length || 0;
-            let extracted = false;
-
-            // Untuk HTML content, extract informasi berguna dan konten
-            let pageInfo = {};
-            if (contentType.includes('text/html') && typeof content === 'string') {
-                pageInfo = this.extractHtmlInfo(content);
-                
-                // Extract readable content jika diinginkan
-                if (shouldExtract) {
-                    const extractResult = this.extractReadableContent(content, contentLimit);
-                    content = extractResult.content;
-                    extracted = extractResult.extracted;
-                }
-            } else if (shouldExtract && typeof content === 'string' && content.length > contentLimit) {
-                // Jika bukan HTML tapi masih text, limit ukurannya
-                content = content.substring(0, contentLimit) + '\n[Content truncated due to size limit...]';
-                extracted = true;
+            if (!response) {
+                throw new Error('No response received from server');
             }
+
+            if (options.waitForSelector) {
+                await page.waitForSelector(options.waitForSelector, {
+                    timeout: options.selectorTimeout || 10000
+                });
+            }
+
+            const responseHeaders = response.headers();
+            const status = response.status();
+            const statusText = response.statusText();
+            const contentType = responseHeaders['content-type'] || '';
+            const headerLength = responseHeaders['content-length'];
+            let contentLength = headerLength ? parseInt(headerLength, 10) : undefined;
+
+            let pageInfo = {};
+            let content = '';
+            let extracted = false;
+            let extractionMethod = 'none';
+            let originalSize = 0;
+            let rawHtml;
+            let domExtractionResult = null;
+            let processedContent = '';
+
+            if (contentType.includes('text/html') || (!contentType && method === 'GET')) {
+                rawHtml = await page.content();
+                originalSize = rawHtml.length;
+                contentLength = contentLength ?? originalSize;
+
+                pageInfo = this.extractHtmlInfo(rawHtml);
+
+                if (shouldExtract) {
+                    const extractResult = this.extractReadableContent(rawHtml, contentLimit);
+                    processedContent = extractResult.content;
+                    content = processedContent.replace(/"/g, '\\"');
+                    extracted = extractResult.extracted;
+                    extractionMethod = extractResult.extracted ? 'html-extraction' : 'none';
+                } else {
+                    processedContent = rawHtml;
+                    content = processedContent.replace(/"/g, '\\"');
+                }
+
+                const requiresDomExtraction = options.forceDomExtraction === true
+                    || (shouldExtract && rawHtml && /<noscript[\s>]/i.test(rawHtml) && /requires javascript/i.test(rawHtml))
+                    || (shouldExtract && typeof processedContent === 'string' && /requires javascript/i.test(processedContent));
+
+                if (requiresDomExtraction) {
+                    domExtractionResult = await this.extractDomText(page, {
+                        selector: options.domSelector || options.textSelector || options.waitForSelector || null
+                    }, contentLimit);
+
+                    if (domExtractionResult && domExtractionResult.content) {
+                        processedContent = domExtractionResult.content;
+                        content = processedContent.replace(/"/g, '\\"');
+                        extracted = true;
+                        extractionMethod = domExtractionResult.method || 'dom-body';
+                    }
+                }
+            } else if (contentType.includes('application/json') || contentType.includes('text/') || contentType.includes('xml')) {
+                const textContent = await response.text();
+                originalSize = textContent.length;
+                contentLength = contentLength ?? originalSize;
+                processedContent = textContent;
+                content = textContent.replace(/"/g, '\\"');
+
+                if (shouldExtract && content.length > contentLimit) {
+                    content = `${content.substring(0, contentLimit)}\n[Content truncated due to size limit...]`;
+                    extracted = true;
+                    extractionMethod = 'truncation';
+                }
+            } else {
+                const bufferContent = await response.buffer();
+                originalSize = bufferContent.length;
+                contentLength = contentLength ?? originalSize;
+
+                const base64Content = bufferContent.toString('base64');
+                const truncatedBase64 = base64Content.length > contentLimit
+                    ? `${base64Content.substring(0, contentLimit)}...[truncated base64]`
+                    : base64Content;
+
+                processedContent = truncatedBase64;
+                content = `Binary content fetched (${contentType || 'unknown'}). Base64 (truncated): ${truncatedBase64}`;
+                extracted = true;
+                extractionMethod = 'binary-base64';
+            }
+
+            const finalContentLength = Number.isFinite(contentLength) ? contentLength : originalSize;
 
             const result = {
                 success: true,
-                url: url,
-                status: response.status,
-                statusText: response.statusText,
-                contentType: contentType,
-                contentLength: contentLength,
+                url,
+                status,
+                contentType,
+                contentLength: finalContentLength,
                 responseTime: duration,
-                headers: response.headers,
-                pageInfo: pageInfo,
-                content: content,
-                message: `Successfully accessed URL: ${url} (${response.status} ${response.statusText})`,
-                originalSize: originalSize,
-                extracted: extracted,
-                extractionMethod: extracted ? (contentType.includes('text/html') ? 'html-extraction' : 'truncation') : 'none'
+                content
             };
 
-            // Jika content terlalu panjang, truncate untuk logging
-            if (typeof content === 'string' && content.length > 1000) {
-                result.contentPreview = content.substring(0, 1000) + '...';
+            if (options.includeHtml === true && rawHtml) {
+                result.rawHtml = rawHtml;
+            }
+
+            if (options.includeMetadata === true) {
+                const metadata = {
+                    statusText,
+                    headers: responseHeaders,
+                    pageInfo,
+                    originalSize,
+                    extracted,
+                    extractionMethod
+                };
+
+                if (domExtractionResult) {
+                    metadata.domExtraction = {
+                        method: domExtractionResult.method,
+                        selector: options.domSelector || options.textSelector || options.waitForSelector || null,
+                        truncated: domExtractionResult.truncated === true
+                    };
+                }
+
+                result.metadata = metadata;
+            }
+
+            if (options.screenshotPath) {
+                await page.screenshot({ path: options.screenshotPath, fullPage: true });
+                result.screenshotPath = options.screenshotPath;
             }
 
             console.log(chalk.green(`✅ URL accessed successfully in ${duration}ms`));
-            console.log(chalk.gray(`   Status: ${response.status} ${response.statusText}`));
-            console.log(chalk.gray(`   Content-Type: ${contentType}`));
+            console.log(chalk.gray(`   Status: ${status} ${statusText}`));
+            console.log(chalk.gray(`   Content-Type: ${contentType || 'unknown'}`));
             console.log(chalk.gray(`   Original Size: ${this.formatSize(originalSize)}`));
-            
+
             if (extracted) {
-                const newSize = typeof content === 'string' ? content.length : 0;
-                console.log(chalk.gray(`   Extracted Size: ${this.formatSize(newSize)} (${Math.round((newSize/originalSize)*100)}% of original)`));
-                console.log(chalk.gray(`   Extraction Method: ${result.extractionMethod}`));
+                const newSize = typeof processedContent === 'string' ? processedContent.length : (typeof content === 'string' ? content.length : 0);
+                const percentage = originalSize > 0 ? Math.round((newSize / originalSize) * 100) : 0;
+                console.log(chalk.gray(`   Extracted Size: ${this.formatSize(newSize)} (${percentage}% of original)`));
+                console.log(chalk.gray(`   Extraction Method: ${extractionMethod}`));
             }
 
             return result;
 
         } catch (error) {
             console.error(chalk.red(`❌ Error accessing URL: ${error.message}`));
-            
-            let errorMessage = error.message;
-            let errorDetails = {};
-
-            if (error.response) {
-                // Server responded with error status
-                errorMessage = `HTTP ${error.response.status}: ${error.response.statusText}`;
-                errorDetails = {
-                    status: error.response.status,
-                    statusText: error.response.statusText,
-                    headers: error.response.headers
-                };
-            } else if (error.request) {
-                // Request was made but no response received
-                errorMessage = 'No response received from server';
-                errorDetails = { request: error.request };
-            }
 
             return {
                 success: false,
-                error: errorMessage,
-                url: url,
-                details: errorDetails,
-                code: error.code
+                error: error.message,
+                url
             };
+        } finally {
+            if (page && requestHandler) {
+                try {
+                    page.off('request', requestHandler);
+                } catch {
+                    // Ignore cleanup errors
+                }
+            }
+
+            if (page && interceptionEnabled) {
+                try {
+                    await page.setRequestInterception(false);
+                } catch {
+                    // Ignore cleanup errors
+                }
+            }
+
+            if (browser) {
+                await browser.close();
+            }
         }
     }
 
@@ -185,7 +315,7 @@ export class InternetTools {
             const $ = cheerio.load(html);
             
             // Hapus elemen yang umumnya tidak mengandung konten penting
-            $('script, style, iframe, nav, footer, aside, ad, .ad, .ads, .advertisement, [class*="cookie"], [class*="banner"], [id*="cookie"], [id*="banner"]').remove();
+            $('script, style, iframe, nav, footer, aside, noscript, ad, .ad, .ads, .advertisement, [class*="cookie"], [class*="banner"], [id*="cookie"], [id*="banner"]').remove();
             
             // Dapatkan judul halaman
             const title = $('title').text().trim();
@@ -261,6 +391,74 @@ export class InternetTools {
                 error: error.message
             };
         }
+    }
+
+    async extractDomText(page, extractionOptions = {}, limit = 50000) {
+        try {
+            const selector = extractionOptions.selector || null;
+            const attribute = extractionOptions.attribute || null;
+
+            const { text } = await page.evaluate(({ selector, attribute }) => {
+                const target = selector ? document.querySelector(selector) : document.body;
+                if (!target) {
+                    return { text: '' };
+                }
+
+                if (attribute && target.getAttribute) {
+                    return { text: target.getAttribute(attribute) || '' };
+                }
+
+                const innerText = target.innerText !== undefined ? target.innerText : target.textContent;
+                return { text: innerText || '' };
+            }, { selector, attribute });
+
+            const normalized = this.normalizeTextContent(text, limit);
+
+            return {
+                content: normalized.content,
+                truncated: normalized.truncated,
+                method: selector ? 'dom-selector' : 'dom-body'
+            };
+        } catch (error) {
+            console.warn(chalk.yellow(`⚠️ DOM extraction failed: ${error.message}`));
+            return {
+                content: '',
+                truncated: false,
+                error: error.message,
+                method: 'dom-error'
+            };
+        }
+    }
+
+    normalizeTextContent(text, limit = 50000) {
+        if (typeof text !== 'string' || text.length === 0) {
+            return {
+                content: '',
+                truncated: false
+            };
+        }
+
+        let normalized = text
+            .replace(/\r\n/g, '\n')
+            .replace(/\t+/g, ' ')
+            .replace(/\u00a0/g, ' ');
+
+        normalized = normalized
+            .split('\n')
+            .map(line => line.trim())
+            .filter(Boolean)
+            .join('\n');
+
+        let truncated = false;
+        if (limit && normalized.length > limit) {
+            normalized = normalized.substring(0, limit) + '\n[Content truncated due to size limit...]';
+            truncated = true;
+        }
+
+        return {
+            content: normalized,
+            truncated
+        };
     }
 
     // Helper untuk extract informasi dari HTML
@@ -371,13 +569,18 @@ export class InternetTools {
             }
             
             // Tambahan: jika perlu ekstra processing untuk konten yang diekstrak
-            if (result.extracted && extractOptions.articleMode && typeof result.content === 'string') {
+            const includeMetadata = extractOptions.includeMetadata !== false;
+            const metadata = includeMetadata ? (result.metadata || {}) : {};
+            const pageInfo = metadata.pageInfo || {};
+            const wasExtracted = metadata.extracted ?? false;
+
+            if (includeMetadata && wasExtracted && extractOptions.articleMode && typeof result.content === 'string') {
                 // Format ulang konten jika mode artikel diaktifkan
                 try {
                     const $ = cheerio.load(result.content);
                     
                     // Tambahkan summary singkat jika tersedia
-                    const description = result.pageInfo.description || '';
+                    const description = pageInfo.description || '';
                     if (description) {
                         result.summary = description;
                     }
@@ -390,7 +593,14 @@ export class InternetTools {
             
             // Info tambahan khusus format
             result.format = extractOptions.format;
-            
+
+            if (includeMetadata) {
+                result.metadata = {
+                    ...metadata,
+                    pageInfo
+                };
+            }
+
             return result;
         } catch (error) {
             console.error(chalk.red(`❌ Error accessing and extracting from URL: ${error.message}`));
@@ -399,6 +609,183 @@ export class InternetTools {
                 error: error.message,
                 url: url
             };
+            }
+    }
+
+    async internetSearch(query, options = {}) {
+        const trimmedQuery = typeof query === 'string' ? query.trim() : '';
+        if (!trimmedQuery) {
+            return {
+                success: false,
+                error: 'Search query is required and must be a non-empty string'
+            };
+        }
+
+        const engine = (options.engine || 'duckduckgo').toLowerCase();
+        const limit = Number.isFinite(options.limit) ? Math.min(Math.max(Math.floor(options.limit), 1), 25) : 10;
+
+        let browser;
+        try {
+            const launchOptions = {
+                headless: options.headless ?? true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox', ...(options.launchArgs || [])]
+            };
+
+            if (options.executablePath) {
+                launchOptions.executablePath = options.executablePath;
+            }
+
+            browser = await puppeteer.launch(launchOptions);
+            const page = await browser.newPage();
+
+            if (options.viewport && typeof options.viewport === 'object') {
+                await page.setViewport(options.viewport);
+            }
+
+            const userAgent = options.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            await page.setUserAgent(userAgent);
+
+            await page.setExtraHTTPHeaders({
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': options.acceptLanguage || 'en-US,en;q=0.9,id;q=0.8',
+                ...options.headers
+            });
+
+            let searchUrl;
+            switch (engine) {
+                case 'bing':
+                    searchUrl = `https://www.bing.com/search?q=${encodeURIComponent(trimmedQuery)}`;
+                    break;
+                case 'duckduckgo':
+                default: {
+                    const safeSearchParam = options.safeSearch === false ? '&kp=-2' : '';
+                    searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(trimmedQuery)}${safeSearchParam}`;
+                    break;
+                }
+            }
+
+            console.log(chalk.blue(`🔎 Internet search (${engine}) for: ${trimmedQuery}`));
+
+            const startedAt = Date.now();
+            await page.goto(searchUrl, {
+                waitUntil: options.waitUntil || 'networkidle2',
+                timeout: options.timeout || 20000
+            });
+
+            const selectors = {
+                result: options.resultSelector || (engine === 'bing' ? 'li.b_algo' : 'div.result'),
+                title: options.titleSelector || (engine === 'bing' ? 'h2 > a' : 'a.result__a'),
+                link: options.linkSelector || (engine === 'bing' ? 'h2 > a' : 'a.result__a'),
+                snippet: options.snippetSelector || (engine === 'bing' ? 'div.b_caption p' : '.result__snippet')
+            };
+
+            if (options.waitForSelector !== false) {
+                try {
+                    await page.waitForSelector(selectors.result, {
+                        timeout: options.selectorTimeout || 8000
+                    });
+                } catch (waitError) {
+                    console.warn(chalk.yellow(`⚠️ Search results selector '${selectors.result}' not found within timeout`));
+                }
+            }
+
+            const rawResults = await page.evaluate(config => {
+                const normalize = value => (value || '').replace(/\s+/g, ' ').trim();
+                const truncate = (value, max) => value.length > max ? `${value.substring(0, max)}...` : value;
+
+                return Array.from(document.querySelectorAll(config.result)).map(element => {
+                    const titleEl = element.querySelector(config.title);
+                    const linkEl = element.querySelector(config.link);
+                    const snippetEl = element.querySelector(config.snippet);
+
+                    const title = normalize(titleEl ? titleEl.textContent : '');
+                    const href = linkEl ? linkEl.getAttribute('href') || '' : '';
+                    const snippet = truncate(normalize(snippetEl ? snippetEl.textContent : ''), config.maxSnippetLength);
+
+                    return { title, href, snippet };
+                }).filter(item => item.title && item.href);
+            }, {
+                ...selectors,
+                maxSnippetLength: options.maxSnippetLength || 400
+            });
+
+            const normalizeLink = href => {
+                try {
+                    if (!href) return '';
+                    if (href.includes('ad_domain')) {
+                        return `ADS Link`;
+                    }
+                    
+                    if (href.includes('duckduckgo.com/l/?uddg=')) {
+                        const urlObj = new URL(`https:${href}`);
+                        const encoded = urlObj.searchParams.get('uddg');
+                        if (encoded) {
+                            return `${decodeURIComponent(encoded)}`;
+                        }
+                    }
+                    if (href.startsWith('//')) {
+                        return `https:${href}`;
+                    }
+                    if (href.startsWith('/')) {
+                        return new URL(href, searchUrl).toString();
+                    }
+                    return href;
+                } catch (error) {
+                    return href;
+                }
+            };
+
+            const cleanedResults = rawResults.map(item => ({
+                title: item.title,
+                url: normalizeLink(item.href),
+                snippet: item.snippet
+            })).filter(item => item.url);
+
+            const limitedResults = cleanedResults.slice(0, limit);
+            const duration = Date.now() - startedAt;
+
+            const response = {
+                success: limitedResults.length > 0,
+                engine,
+                query: trimmedQuery,
+                limit,
+                responseTime: duration,
+                results: limitedResults,
+                totalResults: cleanedResults.length
+            };
+
+            if (options.includeHtml === true) {
+                response.rawHtml = await page.content();
+            }
+
+            if (options.screenshotPath) {
+                await page.screenshot({
+                    path: options.screenshotPath,
+                    fullPage: options.fullPageScreenshot === true
+                });
+                response.screenshotPath = options.screenshotPath;
+            }
+
+            console.log(chalk.green(`✅ Internet search completed in ${duration}ms (${limitedResults.length} results returned)`));
+
+            return response;
+
+        } catch (error) {
+            console.error(chalk.red(`❌ Internet search error: ${error.message}`));
+            return {
+                success: false,
+                error: error.message,
+                query: trimmedQuery,
+                engine
+            };
+        } finally {
+            if (browser) {
+                try {
+                    await browser.close();
+                } catch {
+                    // Ignore cleanup errors
+                }
+            }
         }
     }
 
@@ -476,11 +863,15 @@ export class InternetTools {
             const result = await this.accessUrlAndExtract(url, mergedOptions);
             
             // Format hasil khusus untuk artikel
-            if (result.success && result.extracted) {
+            const metadata = result.metadata || {};
+            const pageInfo = metadata.pageInfo || {};
+            const wasExtracted = metadata.extracted ?? false;
+
+            if (result.success && wasExtracted) {
                 // Tambahkan metadata ke hasil
                 result.articleData = {
-                    title: result.pageInfo.title,
-                    description: result.pageInfo.description,
+                    title: pageInfo.title,
+                    description: pageInfo.description,
                     author: this.extractAuthor(result.content, url),
                     publishDate: this.extractPublishDate(result.content, url),
                     wordCount: this.countWords(result.content),
