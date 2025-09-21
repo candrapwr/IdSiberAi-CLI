@@ -738,7 +738,7 @@ export class InternetTools {
             const cleanedResults = rawResults.map(item => ({
                 title: item.title,
                 url: normalizeLink(item.href),
-                snippet: item.snippet
+                snippet: item.snippet.replace(/"/g, '\\"')
             })).filter(item => item.url);
 
             const limitedResults = cleanedResults.slice(0, limit);
