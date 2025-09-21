@@ -122,6 +122,10 @@ export class GeneralTools {
         return await this.internetTools.accessUrl(url, options);
     }
 
+    async internetSearch(query, options) {
+        return await this.internetTools.internetSearch(query, options);
+    }
+
     async testInternetConnection() {
         return await this.internetTools.testInternetConnection();
     }

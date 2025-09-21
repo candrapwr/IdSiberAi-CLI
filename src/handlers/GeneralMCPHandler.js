@@ -126,6 +126,7 @@ export class GeneralMCPHandler {
             
             // Internet Operations
             access_url: this.tools.accessUrl.bind(this.tools),
+            internet_search: this.tools.internetSearch.bind(this.tools),
 
             // AI Management Operations
             switch_ai_provider: this.switchAIProvider.bind(this),

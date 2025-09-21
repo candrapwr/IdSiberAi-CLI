@@ -12,6 +12,7 @@ IdSiberAi-CLI provides **20+ powerful tools** organized into categories for effi
 | **Directory Operations** | 3 tools | Manage folders and structure |
 | **Analysis Tools** | 3 tools | Code analysis and text processing |
 | **System Operations** | 2 tools | Execute commands and system info |
+| **Internet Operations** | 2 tools | Browse web pages and perform searches |
 | **S3 Cloud Storage** | 5 tools | Cloud storage operations |
 | **AI Management** | 4 tools | Multi-AI provider management |
 | **Logging Operations** | 3 tools | Monitor and analyze usage |
@@ -473,6 +474,88 @@ You: "what's the current directory structure?"
   "permissions": "readable, writable",
   "freeSpace": "2.3 GB",
   "lastModified": "2024-01-15T10:30:00.000Z"
+}
+```
+
+## 🌐 Internet Operations
+
+### `access_url`
+Open web pages with headless Chromium (Puppeteer) and automatically extract readable content.
+
+**Usage:**
+```bash
+You: "visit https://news.ycombinator.com and summarize the front page"
+You: "load https://example.com/blog/123 with selector .article-body"
+```
+
+**Parameters:**
+- `url` - Target URL (required)
+- `options` - Advanced settings (optional)
+  - `extractContent` - Enable smart content extraction (default `true`)
+  - `contentLimit` - Character cap for extracted content (default `2000`)
+  - `waitForSelector` - CSS selector to wait for before scraping
+  - `includeMetadata` - Attach headers/status/page info in a separate `metadata` object
+  - `includeHtml` - Attach rendered HTML to the response
+  - `screenshotPath` - Save a screenshot to the given path
+
+**Returns:**
+```json
+{
+  "success": true,
+  "status": 200,
+  "contentType": "text/html; charset=UTF-8",
+  "contentLength": 15342,
+  "responseTime": 1540,
+  "content": "# Example Domain\n\nThis domain is for use in illustrative examples..."
+}
+```
+
+Set `options.includeMetadata = true` to receive extra details (status text, headers, extraction info, page metadata). When enabled, the response adds a `metadata` object:
+
+```json
+"metadata": {
+  "statusText": "OK",
+  "headers": { "content-type": "text/html; charset=UTF-8" },
+  "pageInfo": { "title": "Example Domain", "description": "Example Domain" },
+  "originalSize": 26451,
+  "extracted": true,
+  "extractionMethod": "html-extraction"
+}
+```
+
+### `internet_search`
+Perform real browser searches (DuckDuckGo by default) and return the top organic results.
+
+**Usage:**
+```bash
+You: "search the web for latest Node.js LTS release"
+You: "duckduckgo search for "serverless deployment guide" limit 5"
+```
+
+**Parameters:**
+- `query` - Search keywords (required)
+- `options` - Search configuration (optional)
+  - `limit` - Maximum results to return (default `10`)
+  - `engine` - Search engine (`duckduckgo`, `bing`)
+  - `safeSearch` - Disable safe search with `false`
+  - `includeHtml` - Include rendered HTML of the results page
+  - `screenshotPath` - Save a screenshot of the results
+
+**Returns:**
+```json
+{
+  "success": true,
+  "engine": "duckduckgo",
+  "query": "latest node.js lts",
+  "results": [
+    {
+      "title": "Node.js — Download",
+      "url": "https://nodejs.org/en/download",
+      "snippet": "Download the latest Long Term Support (LTS) release of Node.js..."
+    }
+  ],
+  "totalResults": 8,
+  "responseTime": 982
 }
 ```
 

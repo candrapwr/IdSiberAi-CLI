@@ -20,7 +20,7 @@ export class DeepSeekProvider extends BaseAIProvider {
         const request = {
             model: options.model || this.getDefaultModel(),
             messages: this.normalizeMessages(messages),
-            temperature: 0.3,
+            temperature: 0.4,
             max_tokens: options.max_tokens || 8000,
             stream: options.stream || false
         };
