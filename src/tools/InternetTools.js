@@ -627,7 +627,7 @@ export class InternetTools {
         let browser;
         try {
             const launchOptions = {
-                headless: options.headless ?? false,
+                headless: options.headless ?? true,
                 args: ['--no-sandbox', '--disable-setuid-sandbox', ...(options.launchArgs || [])]
             };
 
