@@ -621,13 +621,13 @@ export class InternetTools {
             };
         }
 
-        const engine = (options.engine || 'duckduckgo').toLowerCase();
+        const engine = (options.engine || 'bing').toLowerCase();
         const limit = Number.isFinite(options.limit) ? Math.min(Math.max(Math.floor(options.limit), 1), 25) : 10;
 
         let browser;
         try {
             const launchOptions = {
-                headless: options.headless ?? true,
+                headless: options.headless ?? false,
                 args: ['--no-sandbox', '--disable-setuid-sandbox', ...(options.launchArgs || [])]
             };
 
@@ -642,24 +642,45 @@ export class InternetTools {
                 await page.setViewport(options.viewport);
             }
 
-            const userAgent = options.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            const userAgent = options.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
             await page.setUserAgent(userAgent);
-
-            await page.setExtraHTTPHeaders({
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': options.acceptLanguage || 'en-US,en;q=0.9,id;q=0.8',
-                ...options.headers
-            });
 
             let searchUrl;
             switch (engine) {
                 case 'bing':
                     searchUrl = `https://www.bing.com/search?q=${encodeURIComponent(trimmedQuery)}`;
+                    await page.setExtraHTTPHeaders({
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': options.acceptLanguage || 'en-US,en;q=0.9,id;q=0.8',
+                    });
                     break;
                 case 'duckduckgo':
                 default: {
                     const safeSearchParam = options.safeSearch === false ? '&kp=-2' : '';
                     searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(trimmedQuery)}${safeSearchParam}`;
+                    await page.setExtraHTTPHeaders({
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                        'Accept-Encoding': 'gzip, deflate, br, zstd',
+                        'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+                        'Ect': '4g',
+                        'Priority': 'u=0, i',
+                        'Sec-Ch-Ua': '"Chromium";v="140", "Not-A?Brand";v="24", "Google Chrome";v="140"',
+                        'Sec-Ch-Ua-Arch': '"arm"',
+                        'Sec-Ch-Ua-Bitness': '"64"',
+                        'Sec-Ch-Ua-Full-Version': '"140.0.7339.186"',
+                        'Sec-Ch-Ua-Full-Version-List': '"Chromium";v="140.0.7339.186", "Not-A?Brand";v="24.0.0.0", "Google Chrome";v="140.0.7339.186"',
+                        'Sec-Ch-Ua-Mobile': '?0',
+                        'Sec-Ch-Ua-Model': '""',
+                        'Sec-Ch-Ua-Platform': '"macOS"',
+                        'Sec-Ch-Ua-Platform-Version': '"26.0.0"',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'none',
+                        'Sec-Fetch-User': '?1',
+                        'Upgrade-Insecure-Requests': '1',
+                        'Referer': 'https://www.bing.com/',
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+                    });
                     break;
                 }
             }
