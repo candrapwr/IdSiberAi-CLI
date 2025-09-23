@@ -627,7 +627,7 @@ export class InternetTools {
         let browser;
         try {
             const launchOptions = {
-                headless: options.headless ?? true,
+                headless: options.headless ?? false,
                 args: ['--no-sandbox', '--disable-setuid-sandbox', ...(options.launchArgs || [])]
             };
 
@@ -652,16 +652,6 @@ export class InternetTools {
                     await page.setExtraHTTPHeaders({
                         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                         'Accept-Language': options.acceptLanguage || 'en-US,en;q=0.9,id;q=0.8',
-                    });
-                    break;
-                case 'duckduckgo':
-                default: {
-                    const safeSearchParam = options.safeSearch === false ? '&kp=-2' : '';
-                    searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(trimmedQuery)}${safeSearchParam}`;
-                    await page.setExtraHTTPHeaders({
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                        'Accept-Encoding': 'gzip, deflate, br, zstd',
-                        'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
                         'Ect': '4g',
                         'Priority': 'u=0, i',
                         'Sec-Ch-Ua': '"Chromium";v="140", "Not-A?Brand";v="24", "Google Chrome";v="140"',
@@ -680,6 +670,16 @@ export class InternetTools {
                         'Upgrade-Insecure-Requests': '1',
                         'Referer': 'https://www.bing.com/',
                         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+                    });
+                    break;
+                case 'duckduckgo':
+                default: {
+                    const safeSearchParam = options.safeSearch === false ? '&kp=-2' : '';
+                    searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(trimmedQuery)}${safeSearchParam}`;
+                    await page.setExtraHTTPHeaders({
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                        'Accept-Encoding': 'gzip, deflate, br, zstd',
+                        'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
                     });
                     break;
                 }
