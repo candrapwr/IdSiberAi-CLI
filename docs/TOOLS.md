@@ -17,6 +17,24 @@ IdSiberAi-CLI provides **20+ powerful tools** organized into categories for effi
 | **AI Management** | 4 tools | Multi-AI provider management |
 | **Logging Operations** | 3 tools | Monitor and analyze usage |
 
+## 🔧 Enabling Tool Categories
+
+Each tool category can now be toggled via environment variables. When a group is disabled, the section disappears from the system prompt so the assistant avoids suggesting those tools (the underlying tool handlers stay registered by default).
+
+```
+ENABLE_FILE_TOOLS=true
+ENABLE_DIRECTORY_TOOLS=true
+ENABLE_ANALYSIS_TOOLS=true
+ENABLE_SYSTEM_TOOLS=true
+ENABLE_S3_TOOLS=true
+ENABLE_DATABASE_TOOLS=true
+ENABLE_INTERNET_TOOLS=false   # keep in sync with TOOLS_INTERNET_ENABLED
+ENABLE_AI_MANAGEMENT_TOOLS=true
+ENABLE_LOGGING_TOOLS=true
+```
+
+These flags support boolean values (`true/false`, `1/0`, `yes/no`). Update `.env` or `.env.example` and restart the CLI to apply the changes.
+
 ## 📁 File Operations
 
 ### `search_files`
