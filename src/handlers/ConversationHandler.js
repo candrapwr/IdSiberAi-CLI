@@ -18,11 +18,21 @@ export class ConversationHandler {
             enabled: options.enableContextOptimization !== false,
             actions: options.optimizedActions || ['read_file'],
             maxInstances: options.maxInstances || 1,
-            debug: options.debug || false
+            debug: options.debug || false,
+            debugLevel: options.debugLevel,
+            summaryEnabled: options.summaryEnabled !== false,
+            summaryThreshold: options.summaryThreshold,
+            summaryRetention: options.summaryRetention,
+            summaryRole: options.summaryRole,
+            summaryPrefix: options.summaryPrefix,
+            summaryMaxLineLength: options.summaryMaxLineLength
         });
     }
 
     initializeSystemPrompt(availableAIProviders, currentProvider) {
+        // Reset ringkasan setiap kali sesi baru dimulai
+        this.contextOptimizer.resetSummaryMemory();
+
         const systemPrompt = `# AI ASSISTANT PROTOCOL: STREAM-FRIENDLY SINGLE ACTION
 
 ## IDENTITY & BEHAVIOR
@@ -82,7 +92,7 @@ You are a concise, action-oriented AI assistant with multiple tool capabilities.
 - execute_query(query, database): Execute SQL query with optional database parameter. If database is not provided, uses the default database from environment variables.
 
 ${(this.toolsInternetEnabled)? `## INTERNET OPERATIONS TOOLS
-- internet_search(query, options): Perform a live search, supported engine (bing) and return top organic results.
+- internet_search(query, options): Perform a live search, supported engine (duckduckgo) and return top organic results.
 - access_url(url): Access and retrieve content from the specified URL.`:``}
 
 # Response rules
@@ -156,6 +166,7 @@ ${JSON.stringify(this.dbConfig)}
         this.conversationHistory = [
             { role: 'system', content: systemPrompt }
         ];
+        this.contextOptimizer.resetSummaryMemory();
     }
     
     getConversationHistory() {
@@ -195,7 +206,8 @@ ${JSON.stringify(this.dbConfig)}
             messagesRemoved: result.removed,
             newLength: this.conversationHistory.length,
             originalLength: originalHistory.length,
-            stats: this.contextOptimizer.getStats()
+            stats: this.contextOptimizer.getStats(),
+            summary: result.summary
         };
     }
     
@@ -252,6 +264,7 @@ ${JSON.stringify(this.dbConfig)}
 
         // clone to avoid accidental mutation from outside
         this.conversationHistory = messages.map(message => ({ ...message }));
+        this.contextOptimizer.resetSummaryMemory();
         return this.conversationHistory;
     }
 

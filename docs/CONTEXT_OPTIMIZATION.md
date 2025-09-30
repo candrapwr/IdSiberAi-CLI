@@ -10,12 +10,24 @@ The Context Optimizer identifies and removes duplicate tool calls (and their res
 
 For example, if you've called `read_file("config.json")` three times in a conversation, the optimizer will keep only the most recent call and remove the earlier ones, significantly reducing token usage.
 
+### Context Summaries
+
+When the conversation grows beyond the configured threshold, the optimizer now rewrites the oldest turns into a single **summary bubble**. This bubble captures:
+
+- Latest intent of each user request in that window
+- Tool calls that were executed (action + relevant parameters)
+- High level results returned by the tools (file names, counts, short messages)
+- Assistant replies that concluded the turn
+
+Only the most recent `CONTEXT_SUMMARY_RETENTION` messages stay verbatim. Everything older is expressed as concise bullet points that mimic how editor assistants (e.g., VSCode Codex) keep the chat light while preserving meaning.
+
 ## Key Features
 
 - **Selective Action Optimization**: Configure which tool actions should be optimized (e.g., `read_file`, `list_directory`)
-- **Preserve Recent Context**: Always keeps the most recent instance of each tool call
-- **Token Savings**: Reduces token usage by eliminating redundant information
-- **Statistics Tracking**: Monitors optimization performance and token savings
+- **Auto Summaries (Codex style)**: Older conversation turns are collapsed into a compact summary bubble with tool usage notes
+- **Preserve Recent Context**: Always keeps the most recent instance of each tool call alongside the latest user/assistant turns
+- **Token Savings**: Reduces token usage by eliminating redundant information and long tool outputs
+- **Statistics Tracking**: Monitors optimization performance, token savings, and summary metrics
 - **Manual Trigger**: Manually trigger optimization when needed
 
 ## Configuration
@@ -29,6 +41,16 @@ Context Optimization can be configured through:
    
    # Comma-separated list of actions to optimize
    CONTEXT_OPTIMIZATION_ACTIONS=read_file,list_directory
+
+    # Enable or disable auto summaries (default: true)
+    ENABLE_CONTEXT_SUMMARY=true
+
+    # Optional fine-tuning for summaries
+    CONTEXT_SUMMARY_THRESHOLD=12          # Start summarizing when more than 12 messages (excluding system)
+    CONTEXT_SUMMARY_RETENTION=6           # Keep the most recent 6 messages verbatim
+    CONTEXT_SUMMARY_ROLE=assistant        # Role used for injected summary bubble
+    CONTEXT_SUMMARY_PREFIX="Context summary (auto-generated):"
+    CONTEXT_SUMMARY_MAX_LINE_LENGTH=200   # Max characters per summary bullet
    ```
 
 2. **Command Line Interface**:
@@ -57,6 +79,14 @@ mcp.setContextOptimizationEnabled(true);
 // Configure which actions to optimize
 mcp.setOptimizedActions(['read_file', 'list_directory']);
 
+// (Optional) provide custom summary behaviour when constructing the handler
+const mcp = new GeneralMCPHandler(apiKeys, workdir, 15, {
+  enableContextOptimization: true,
+  summaryThreshold: 14,
+  summaryRetention: 6,
+  summaryPrefix: 'Session digest:'
+});
+
 // Manually trigger optimization
 const result = mcp.optimizeContext();
 console.log(`Removed ${result.messagesRemoved} messages`);
@@ -64,6 +94,13 @@ console.log(`Removed ${result.messagesRemoved} messages`);
 // Get optimization statistics
 const stats = mcp.getContextOptimizationStats();
 ```
+
+### Summary Metrics
+
+Optimization statistics now include:
+
+- `summaryMessagesGenerated` – how many times the summary bubble changed
+- `summaryLinesTracked` – number of bullet points kept in the summary
 
 ## Recommended Actions to Optimize
 

@@ -34,6 +34,27 @@ export class GeneralMCPHandler {
                               (process.env.CONTEXT_OPTIMIZATION_ACTIONS ? 
                                process.env.CONTEXT_OPTIMIZATION_ACTIONS.split(',') : 
                                ['read_file']);
+
+        const parseInteger = (value) => {
+            if (value === undefined || value === null || value === '') return undefined;
+            const parsed = parseInt(value, 10);
+            return Number.isNaN(parsed) ? undefined : parsed;
+        };
+
+        const summaryEnabledEnv = process.env.ENABLE_CONTEXT_SUMMARY;
+        if (typeof options.summaryEnabled === 'boolean') {
+            this.enableContextSummaries = options.summaryEnabled;
+        } else if (summaryEnabledEnv === 'false') {
+            this.enableContextSummaries = false;
+        } else {
+            this.enableContextSummaries = true; // default on
+        }
+
+        this.contextSummaryThreshold = parseInteger(options.summaryThreshold ?? process.env.CONTEXT_SUMMARY_THRESHOLD);
+        this.contextSummaryRetention = parseInteger(options.summaryRetention ?? process.env.CONTEXT_SUMMARY_RETENTION);
+        this.contextSummaryRole = options.summaryRole || process.env.CONTEXT_SUMMARY_ROLE || 'assistant';
+        this.contextSummaryPrefix = options.summaryPrefix || process.env.CONTEXT_SUMMARY_PREFIX || 'Context summary (auto-generated):';
+        this.contextSummaryMaxLineLength = parseInteger(options.summaryMaxLineLength ?? process.env.CONTEXT_SUMMARY_MAX_LINE_LENGTH);
         
         // Set logger untuk AIManager
         if (this.logger) {
@@ -47,7 +68,14 @@ export class GeneralMCPHandler {
         this.conversationHandler = new ConversationHandler({
             enableContextOptimization: this.enableContextOptimization,
             optimizedActions: this.optimizedActions,
-            debug: options.debug || false
+            debug: options.debug || false,
+            summaryEnabled: this.enableContextSummaries,
+            summaryThreshold: this.contextSummaryThreshold,
+            summaryRetention: this.contextSummaryRetention,
+            summaryRole: this.contextSummaryRole,
+            summaryPrefix: this.contextSummaryPrefix,
+            summaryMaxLineLength: this.contextSummaryMaxLineLength,
+            debugLevel: options.debugLevel
         });
         
         this.toolCallHandler = new ToolCallHandler(this.availableTools, this.logger, this.debug, this.sessionId, this.aiManager);

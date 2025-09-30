@@ -21,18 +21,33 @@ export class ContextOptimizer {
         this.debug = options.debug || false;
         
         // Level logging (1-3, dengan 3 paling detail)
-        this.debugLevel = options.debugLevel || 1; // Reduced to 1 for minimum logging
-        
+        this.debugLevel = options.debugLevel || 1; // Reduced to 1 untuk logging minimal
+
+        // Pengaturan ringkasan konteks (mirip approach extension IDE)
+        this.summaryEnabled = options.summaryEnabled !== false;
+        this.summaryThreshold = options.summaryThreshold || 12; // Minimal panjang percakapan sebelum disingkat
+        this.summaryRetention = options.summaryRetention || 6; // Jumlah pesan terbaru yang tetap utuh
+        this.summaryRole = options.summaryRole || 'assistant';
+        this.summaryPrefix = options.summaryPrefix || 'Context summary (auto-generated):';
+        this.summaryMaxLineLength = options.summaryMaxLineLength || 200;
+
+        // Penyimpanan ringkasan
+        this.summaryLines = [];
+        this.summaryFingerprints = new Set();
+        this.lastSummaryContent = '';
+
         // Statistik optimasi
         this.stats = {
             messagesRemoved: 0,
             totalOptimizations: 0,
             lastOptimizationTime: null,
-            tokensSaved: 0 // Estimasi
+            tokensSaved: 0, // Estimasi
+            summaryMessagesGenerated: 0,
+            summaryLinesTracked: 0
         };
         
         // Version tracking (untuk membantu debugging)
-        this.version = "1.2.0"; // Add TOOLCALL format support
+        this.version = "1.3.0"; // Add contextual summarization support
         
         // Minimal log on initialization
         if (this.debug) {
@@ -112,9 +127,266 @@ export class ContextOptimizer {
             messagesRemoved: 0,
             totalOptimizations: 0,
             lastOptimizationTime: null,
-            tokensSaved: 0
+            tokensSaved: 0,
+            summaryMessagesGenerated: 0,
+            summaryLinesTracked: 0
         };
+        this.resetSummaryMemory();
         return this.stats;
+    }
+
+    /**
+     * Mengosongkan memori ringkasan sehingga percakapan baru tidak bercampur
+     */
+    resetSummaryMemory() {
+        this.summaryLines = [];
+        this.summaryFingerprints = new Set();
+        this.lastSummaryContent = '';
+    }
+
+    /**
+     * Mengecek apakah pesan merupakan ringkasan yang dihasilkan optimizer
+     * @param {Object} message
+     * @returns {boolean}
+     */
+    isSummaryMessage(message = {}) {
+        if (!message) return false;
+        if (message.metadata && message.metadata.isSummary) return true;
+        if (typeof message.content !== 'string') return false;
+        return message.content.startsWith(this.summaryPrefix);
+    }
+
+    normalizeWhitespace(value = '') {
+        return value.replace(/\s+/g, ' ').trim();
+    }
+
+    truncate(value = '', max = this.summaryMaxLineLength) {
+        if (!value) return '';
+        if (value.length <= max) return value;
+        return `${value.substring(0, max - 3)}...`;
+    }
+
+    createFingerprint(role, descriptor) {
+        return `${role}:${descriptor}`.toLowerCase();
+    }
+
+    formatParameters(parameters) {
+        if (!parameters) return '';
+        try {
+            const parsed = typeof parameters === 'string' ? JSON.parse(parameters) : parameters;
+            if (parsed && typeof parsed === 'object') {
+                const keys = Object.keys(parsed);
+                if (keys.length === 0) return '';
+                return keys
+                    .slice(0, 3)
+                    .map(key => `${key}=${this.truncate(String(parsed[key]), 60)}`)
+                    .join(', ');
+            }
+        } catch (_) {
+            // Abaikan parsing error, fallback ke string mentah
+        }
+        return typeof parameters === 'string' ? this.truncate(parameters, 80) : '';
+    }
+
+    extractAssistantToolCalls(message) {
+        const calls = [];
+        if (!message || message.role !== 'assistant') return calls;
+
+        if (Array.isArray(message.tool_calls)) {
+            for (const toolCall of message.tool_calls) {
+                const action = toolCall?.function?.name;
+                if (!action) continue;
+                calls.push({
+                    action,
+                    parameters: toolCall.function.arguments
+                });
+            }
+        }
+
+        if (typeof message.content === 'string') {
+            const lines = message.content.split(/\r?\n/);
+            for (const line of lines) {
+                const match = line.match(/^\s*TOOLCALL:\s*(\{.*\})\s*$/);
+                if (!match) continue;
+                try {
+                    const payload = JSON.parse(match[1]);
+                    if (payload?.action) {
+                        calls.push({
+                            action: payload.action,
+                            parameters: payload.parameters
+                        });
+                    }
+                } catch (_) {
+                    continue;
+                }
+            }
+        }
+
+        return calls;
+    }
+
+    summarizeAssistantMessage(message) {
+        if (!message || message.role !== 'assistant') return null;
+
+        const toolCalls = this.extractAssistantToolCalls(message);
+        if (toolCalls.length > 0) {
+            const summaries = toolCalls.map(call => {
+                const params = this.formatParameters(call.parameters);
+                return params
+                    ? `Used ${call.action} (${params})`
+                    : `Used ${call.action}`;
+            });
+            return summaries.join(' | ');
+        }
+
+        if (typeof message.content === 'string' && message.content.trim()) {
+            const normalized = this.normalizeWhitespace(message.content);
+            return normalized ? `Assistant replied: ${this.truncate(normalized)}` : null;
+        }
+
+        return null;
+    }
+
+    summarizeUserMessage(message) {
+        if (!message || message.role !== 'user') return null;
+        if (typeof message.content !== 'string') return null;
+
+        // Tool result format: "Tool result for <action>:\n{json}"
+        const toolResultMatch = message.content.match(/^Tool result for\s+([\w_-]+):\s*\n([\s\S]*)$/);
+        if (toolResultMatch) {
+            const action = toolResultMatch[1];
+            const jsonPart = toolResultMatch[2] || '';
+            let descriptor = '';
+            try {
+                const parsed = JSON.parse(jsonPart);
+                if (parsed && typeof parsed === 'object') {
+                    if (parsed.file_path) {
+                        descriptor = `file=${this.truncate(parsed.file_path, 80)}`;
+                    } else if (parsed.directory) {
+                        descriptor = `dir=${this.truncate(parsed.directory, 80)}`;
+                    } else if (parsed.message) {
+                        descriptor = this.truncate(parsed.message);
+                    } else if (parsed.files && Array.isArray(parsed.files)) {
+                        descriptor = `${parsed.files.length} files`;
+                    }
+                }
+            } catch (_) {
+                descriptor = this.truncate(jsonPart);
+            }
+
+            return descriptor
+                ? `Result of ${action}: ${descriptor}`
+                : `Result of ${action}`;
+        }
+
+        if (message.content.startsWith('Context summary')) {
+            return null;
+        }
+
+        const normalized = this.normalizeWhitespace(message.content);
+        return normalized ? `User said: ${this.truncate(normalized)}` : null;
+    }
+
+    extractSummaryLines(messages) {
+        const newLines = [];
+        for (const message of messages) {
+            if (this.isSummaryMessage(message)) continue;
+            let summaryLine = null;
+            if (message.role === 'assistant') {
+                summaryLine = this.summarizeAssistantMessage(message);
+            } else if (message.role === 'user') {
+                summaryLine = this.summarizeUserMessage(message);
+            } else if (message.role === 'system') {
+                // Sistem prompt di luar lingkup ringkasan
+                continue;
+            }
+
+            if (!summaryLine) continue;
+
+            const fingerprint = this.createFingerprint(message.role, summaryLine);
+            if (this.summaryFingerprints.has(fingerprint)) continue;
+            this.summaryFingerprints.add(fingerprint);
+            this.summaryLines.push(summaryLine);
+            newLines.push(summaryLine);
+        }
+        return newLines;
+    }
+
+    composeSummaryContent() {
+        if (!this.summaryEnabled || this.summaryLines.length === 0) {
+            return '';
+        }
+
+        const bulletLines = this.summaryLines.map(line => `- ${line}`);
+        return `${this.summaryPrefix}\n${bulletLines.join('\n')}`;
+    }
+
+    applySummarization(messages) {
+        if (!this.summaryEnabled) {
+            return { messages, summaryChanged: false };
+        }
+
+        if (!Array.isArray(messages) || messages.length === 0) {
+            return { messages, summaryChanged: false };
+        }
+
+        // Pisahkan ringkasan yang sudah ada agar tidak diduplikasi
+        let existingSummaryMessage = null;
+        const workingMessages = [];
+        for (const message of messages) {
+            if (!existingSummaryMessage && this.isSummaryMessage(message)) {
+                existingSummaryMessage = message;
+            } else {
+                workingMessages.push(message);
+            }
+        }
+
+        if (workingMessages.length <= this.summaryThreshold) {
+            if (existingSummaryMessage) {
+                return {
+                    messages: [existingSummaryMessage, ...workingMessages],
+                    summaryChanged: false
+                };
+            }
+            return { messages: workingMessages, summaryChanged: false };
+        }
+
+        const slicePoint = Math.max(workingMessages.length - this.summaryRetention, 0);
+        const oldMessages = workingMessages.slice(0, slicePoint);
+        const recentMessages = workingMessages.slice(slicePoint);
+
+        const newLines = this.extractSummaryLines(oldMessages);
+        const summaryContent = this.composeSummaryContent();
+
+        if (!summaryContent && existingSummaryMessage) {
+            return {
+                messages: [existingSummaryMessage, ...recentMessages],
+                summaryChanged: false
+            };
+        }
+
+        if (!summaryContent) {
+            return { messages: recentMessages, summaryChanged: false };
+        }
+
+        const summaryMessage = {
+            role: this.summaryRole,
+            content: summaryContent,
+            metadata: {
+                isSummary: true,
+                totalLines: this.summaryLines.length
+            }
+        };
+
+        const summaryChanged = summaryContent !== this.lastSummaryContent || newLines.length > 0;
+        this.lastSummaryContent = summaryContent;
+
+        return {
+            messages: [summaryMessage, ...recentMessages],
+            summaryChanged,
+            summaryLinesAdded: newLines.length,
+            summaryMessage
+        };
     }
 
     /**
@@ -422,53 +694,63 @@ export class ContextOptimizer {
             }
         }
         
-        // Jika tidak ada yang perlu dihapus, kembalikan pesan original
-        if (finalIndicesToRemove.size === 0) {
-            if (this.debug) console.log('[Context Optimizer] No messages to remove after safe guard, returning original messages');
-            return {
-                optimized: false,
-                messages: messages,
-                removed: 0
-            };
-        }
-        
-        // Langkah 3: Hapus pesan yang ditandai
-        if (this.debug) {
-            console.log(`[Context Optimizer] Removing ${finalIndicesToRemove.size} messages after safe guard check`);
-            if (this.debugLevel > 1) {
-                console.log(`[Context Optimizer] Indices to remove: ${Array.from(finalIndicesToRemove).join(', ')}`);
+        let removedCount = 0;
+        if (finalIndicesToRemove.size > 0) {
+            if (this.debug) {
+                console.log(`[Context Optimizer] Removing ${finalIndicesToRemove.size} messages after safe guard check`);
+                if (this.debugLevel > 1) {
+                    console.log(`[Context Optimizer] Indices to remove: ${Array.from(finalIndicesToRemove).join(', ')}`);
+                }
             }
+
+            optimizedMessages = optimizedMessages.filter((_, index) => !finalIndicesToRemove.has(index));
+            removedCount = finalIndicesToRemove.size;
+
+            this.stats.messagesRemoved += removedCount;
+            this.stats.tokensSaved += removedCount * 100; // Estimasi kasar
         }
-        
-        optimizedMessages = optimizedMessages.filter((_, index) => !finalIndicesToRemove.has(index));
-        
-        // Update statistik
-        this.stats.messagesRemoved += finalIndicesToRemove.size;
-        this.stats.totalOptimizations++;
-        this.stats.lastOptimizationTime = new Date();
-        
-        // Estimasi token yang dihemat (rata-rata 100 token per pesan)
-        this.stats.tokensSaved += finalIndicesToRemove.size * 100;
-        
+
+        const summaryResult = this.applySummarization(optimizedMessages);
+        optimizedMessages = summaryResult.messages;
+
         const endTime = Date.now();
-        
+
+        const summaryChanged = summaryResult.summaryChanged || false;
+        if (summaryChanged) {
+            this.stats.summaryMessagesGenerated++;
+        }
+        this.stats.summaryLinesTracked = this.summaryLines.length;
+
+        const optimizedOccurred = removedCount > 0 || summaryChanged;
+        if (optimizedOccurred) {
+            this.stats.totalOptimizations++;
+            this.stats.lastOptimizationTime = new Date();
+        }
+
         if (this.debug) {
             console.log(`[Context Optimizer] Optimization completed in ${endTime - startTime}ms`);
-            console.log(`[Context Optimizer] Removed ${finalIndicesToRemove.size} redundant messages`);
+            console.log(`[Context Optimizer] Removed ${removedCount} redundant messages`);
             
             if (this.debugLevel > 1) {
                 console.log(`[Context Optimizer] New message count: ${optimizedMessages.length}`);
                 console.log(`[Context Optimizer] Total optimizations: ${this.stats.totalOptimizations}`);
                 console.log(`[Context Optimizer] Total messages removed: ${this.stats.messagesRemoved}`);
                 console.log(`[Context Optimizer] Estimated tokens saved: ${this.stats.tokensSaved}`);
+                if (summaryChanged) {
+                    console.log(`[Context Optimizer] Summary updated with ${summaryResult.summaryLinesAdded || 0} new line(s)`);
+                }
             }
         }
         
         return {
-            optimized: finalIndicesToRemove.size > 0,
+            optimized: optimizedOccurred,
             messages: optimizedMessages,
-            removed: finalIndicesToRemove.size,
-            processingTime: endTime - startTime
+            removed: removedCount,
+            processingTime: endTime - startTime,
+            summary: {
+                updated: summaryChanged,
+                lines: this.summaryLines.length
+            }
         };
     }
 }

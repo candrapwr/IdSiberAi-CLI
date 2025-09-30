@@ -67,6 +67,9 @@ export class RequestHandler {
                     if (optimizationResult.optimized) {
                         contextOptimizationStats = optimizationResult;
                         console.log(chalk.blue(`🧹 Context optimized: removed ${optimizationResult.messagesRemoved} redundant messages`));
+                        if (optimizationResult.summary && optimizationResult.summary.updated) {
+                            console.log(chalk.blue(`🗂 Context summary refreshed (${optimizationResult.summary.lines} lines tracked)`));
+                        }
                     }
                 }
                 
