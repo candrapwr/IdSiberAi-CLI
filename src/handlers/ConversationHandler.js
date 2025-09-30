@@ -4,14 +4,56 @@ export class ConversationHandler {
     constructor(options = {}) {
         this.conversationHistory = [];
 
-        // get intern tools status
-        this.toolsInternetEnabled = (process.env.TOOLS_INTERNET_ENABLED)? process.env.TOOLS_INTERNET_ENABLED == 'true' : false;
-
         // get db config info
         this.dbConfig = {
             type: process.env.DB_TYPE,
             database: process.env.DB_NAME,
         }
+
+        const parseBoolean = (value, defaultValue = true) => {
+            if (value === undefined || value === null || value === '') {
+                return defaultValue;
+            }
+            if (typeof value === 'boolean') {
+                return value;
+            }
+            const normalized = String(value).trim().toLowerCase();
+            if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+            if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+            return defaultValue;
+        };
+
+        const defaultToolGroups = {
+            files: true,
+            directories: true,
+            analysis: true,
+            system: true,
+            s3: true,
+            database: true,
+            internet: false,
+            aiManagement: true,
+            logging: true
+        };
+
+        const envToolGroups = {
+            files: parseBoolean(process.env.ENABLE_FILE_TOOLS, defaultToolGroups.files),
+            directories: parseBoolean(process.env.ENABLE_DIRECTORY_TOOLS, defaultToolGroups.directories),
+            analysis: parseBoolean(process.env.ENABLE_ANALYSIS_TOOLS, defaultToolGroups.analysis),
+            system: parseBoolean(process.env.ENABLE_SYSTEM_TOOLS, defaultToolGroups.system),
+            s3: parseBoolean(process.env.ENABLE_S3_TOOLS, defaultToolGroups.s3),
+            database: parseBoolean(process.env.ENABLE_DATABASE_TOOLS, defaultToolGroups.database),
+            internet: parseBoolean(process.env.ENABLE_INTERNET_TOOLS ?? process.env.TOOLS_INTERNET_ENABLED, defaultToolGroups.internet),
+            aiManagement: parseBoolean(process.env.ENABLE_AI_MANAGEMENT_TOOLS, defaultToolGroups.aiManagement),
+            logging: parseBoolean(process.env.ENABLE_LOGGING_TOOLS, defaultToolGroups.logging)
+        };
+
+        this.enabledToolGroups = {
+            ...defaultToolGroups,
+            ...envToolGroups,
+            ...(options.enabledToolGroups || {})
+        };
+
+        this.toolsInternetEnabled = !!this.enabledToolGroups.internet;
 
         // Initialize Context Optimizer
         this.contextOptimizer = new ContextOptimizer({
@@ -32,6 +74,69 @@ export class ConversationHandler {
     initializeSystemPrompt(availableAIProviders, currentProvider) {
         // Reset ringkasan setiap kali sesi baru dimulai
         this.contextOptimizer.resetSummaryMemory();
+
+        const toolSections = [];
+
+        if (this.enabledToolGroups.files) {
+            toolSections.push(`## FILE OPERATIONS TOOLS
+- search_files(pattern, directory): Find files
+- read_file(file_path): Read file content
+- write_file(file_path, content): Create/update file
+- append_to_file(file_path, content): Append to file
+- delete_file(file_path): Delete file
+- copy_file(source_path, destination_path): Copy file
+- move_file(source_path, destination_path): Move/rename file
+- edit_file(file_path, edits): Edit specific parts of a file`);
+        }
+
+        if (this.enabledToolGroups.directories) {
+            toolSections.push(`## DIRECTORY OPERATIONS TOOLS
+- list_directory(dir_path): List directory contents
+- create_directory(dir_path): Create directory
+- delete_directory(dir_path): Delete directory`);
+        }
+
+        if (this.enabledToolGroups.analysis) {
+            toolSections.push(`## ANALYSIS TOOLS
+- analyze_file_structure(file_path): Analyze code structure
+- find_in_files(search_term, directory, file_pattern): Search in files
+- replace_in_files(search_term, replace_term, directory, file_pattern): Replace in files`);
+        }
+
+        if (this.enabledToolGroups.system) {
+            toolSections.push(`## SYSTEM OPERATIONS TOOLS
+- execute_command(command, options): Execute commands`);
+        }
+
+        if (this.enabledToolGroups.s3) {
+            toolSections.push(`## S3 OPERATIONS TOOLS
+- s3_upload(key, file_path): Upload file to S3
+- s3_download(key, download_path): Download file from S3  
+- s3_delete(key): Delete file from S3
+- s3_search(prefix, max_keys): Search files in S3
+- s3_set_acl(key, acl): Change file access permissions ('private'|'public-read'|'public-read-write'|etc)`);
+        }
+
+        if (this.enabledToolGroups.database) {
+            toolSections.push(`## DATABASE OPERATIONS TOOLS
+- execute_query(query, database): Execute SQL query with optional database parameter. If database is not provided, uses the default database from environment variables.`);
+        }
+
+        if (this.enabledToolGroups.internet) {
+            toolSections.push(`## INTERNET OPERATIONS TOOLS
+- internet_search(query, options): Perform a live search, supported engine (duckduckgo) and return top organic results. Gunakan dorking operators seperti site:, intitle:, inurl:, filetype:, intext:, "frasa eksak", -kata, OR untuk query lebih presisi. Contoh: node.js current version site:nodejs.org
+- access_url(url): Access and retrieve content from the specified URL.`);
+        }
+
+        const toolSectionText = toolSections.length > 0
+            ? toolSections.join('\n\n')
+            : '- No tool categories enabled (all tool groups disabled).';
+
+        const availableToolsSection = `# Available tools:\n\n${toolSectionText}`;
+
+        const internetExampleSection = this.toolsInternetEnabled
+            ? `\n\n## Example of using the internet serach tool (CORRECT - ONE TOOL):\nTHINK: Search first, delete later\nTOOLCALL: {"action":"internet_search","parameters":{"query":"news today","options":{"engine":"bing","limit":5}}}`
+            : '';
 
         const systemPrompt = `# AI ASSISTANT PROTOCOL: STREAM-FRIENDLY SINGLE ACTION
 
@@ -56,44 +161,7 @@ You are a concise, action-oriented AI assistant with multiple tool capabilities.
 
 # If you don't need a tool, just reply normally without TOOLCALL.
 
-# Available tools:
-
-## FILE OPERATIONS TOOLS
-- search_files(pattern, directory): Find files
-- read_file(file_path): Read file content
-- write_file(file_path, content): Create/update file
-- append_to_file(file_path, content): Append to file
-- delete_file(file_path): Delete file
-- copy_file(source_path, destination_path): Copy file
-- move_file(source_path, destination_path): Move/rename file
-- edit_file(file_path, edits): Edit specific parts of a file
-
-## DIRECTORY OPERATIONS TOOLS
-- list_directory(dir_path): List directory contents
-- create_directory(dir_path): Create directory
-- delete_directory(dir_path): Delete directory
-
-## ANALYSIS TOOLS
-- analyze_file_structure(file_path): Analyze code structure
-- find_in_files(search_term, directory, file_pattern): Search in files
-- replace_in_files(search_term, replace_term, directory, file_pattern): Replace in files
-
-## SYSTEM OPERATIONS TOOLS
-- execute_command(command, options): Execute commands
-
-## S3 OPERATIONS TOOLS
-- s3_upload(key, file_path): Upload file to S3
-- s3_download(key, download_path): Download file from S3  
-- s3_delete(key): Delete file from S3
-- s3_search(prefix, max_keys): Search files in S3
-- s3_set_acl(key, acl): Change file access permissions ('private'|'public-read'|'public-read-write'|etc)
-
-## DATABASE OPERATIONS TOOLS
-- execute_query(query, database): Execute SQL query with optional database parameter. If database is not provided, uses the default database from environment variables.
-
-${(this.toolsInternetEnabled)? `## INTERNET OPERATIONS TOOLS
-- internet_search(query, options): Perform a live search, supported engine (duckduckgo) and return top organic results.
-- access_url(url): Access and retrieve content from the specified URL.`:``}
+${availableToolsSection}
 
 # Response rules
 - Preferred: a SINGLE-LINE TOOLCALL: { ... } with strictly valid JSON.
@@ -119,11 +187,7 @@ Please, what can I help you with....
 ## INCORRECT EXAMPLE (AVOID THIS):
 THINK: Need to create dir and write file.
 TOOLCALL: {"action":"create_directory"}
-TOOLCALL: {"action":"write_file"}  // FORBIDDEN - only one per response!
-
-## Example of using the internet serach tool (CORRECT - ONE TOOL):
-THINK: Search first, delete later
-TOOLCALL: {"action":"internet_search","parameters":{"query":"news today","options":{"engine":"bing","limit":5}}}
+TOOLCALL: {"action":"write_file"}  // FORBIDDEN - only one per response!${internetExampleSection}
 
 ## The following is configuration information for the database name and database type on this system:
 ${JSON.stringify(this.dbConfig)}
