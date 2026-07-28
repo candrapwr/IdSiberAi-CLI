@@ -3,6 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Multi-AI](https://img.shields.io/badge/AI-Multi--Provider-blue.svg)](./docs/AI_PROVIDERS.md)
+[![Status](https://img.shields.io/badge/status-aktif_maintained-success.svg)](#)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
+[![Stars](https://img.shields.io/github/stars/candrapwr/IdSiberAi-CLI?style=social&label=Star)](https://github.com/candrapwr/IdSiberAi-CLI/stargazers)
+
+> 🌐 Bagian dari **Ekosistem Siber** — dibangun & dirawat oleh **dataSiberLab**.
 
 > 🤖 **AI-Powered CLI** that integrates multiple AI providers with powerful local system management tools.
 
@@ -227,6 +232,14 @@ The AI will handle the rest! 🚀
 ### 📞 Need Help?
 
 - 📖 **[Documentation](./docs/)** - Comprehensive guides
-- 🐛 **[Issues](https://github.com/candrapwr/IdSiberAi-CLI/issues)** - Bug reports & features  
+- 🐛 **[Issues](https://github.com/candrapwr/IdSiberAi-CLI/issues)** - Bug reports & features
 - 💬 **[Discussions](https://github.com/candrapwr/IdSiberAi-CLI/discussions)** - Community support
 - 📧 **Contact** - candrapwr@datasiber.com
+
+---
+
+<div align="center">
+
+**Dibuat dengan ❤️ oleh [dataSiberLab](https://datasiber.com)** · 🌐 [datasiber.com](https://datasiber.com)
+
+</div>
